@@ -20,3 +20,7 @@ Public Function Expr_accept(visitor As ExprVisitor) As Variant
     st Expr_accept, visitor.visitLiteralExpr(Me)
 End Function
 
+Private Function Expr_copy() As Variant
+
+st Expr_copy, Me
+End Function

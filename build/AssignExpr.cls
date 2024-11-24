@@ -11,6 +11,12 @@ Implements Expr
 Public assignee As Expr
 Public value As Expr
 
+Private Function Expr_copy() As Variant
+Dim temp As New AssignExpr
+temp.init assignee.copy(), value.copy()
+st Expr_copy, temp
+End Function
+
 Public Function Expr_init(ParamArray arr() As Variant)
     st assignee, arr(0)
     st value, arr(1)

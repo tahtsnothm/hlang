@@ -378,27 +378,27 @@ Private Function comparison_()
 End Function
 
 Private Function term_()
-    Dim expr_ As New Expr
+    Dim expr_ As Expr
     Set expr_ = factor_()
     While (match(MINUS, PLUS))
         Dim operator As Token
         Set operator = previous()
         Dim left As New Expr
-        st left, expr_
+        st left, expr_.copy()
         
-        Dim right As New Expr
+        Dim right As Expr
         st right, factor_()
-        pt expr_.accept(New AstPrinter), right.accept(New AstPrinter)
+        'pt expr_.accept(New AstPrinter), right.accept(New AstPrinter)
+        
+        
         Dim temp As New BinaryExpr
-        
-        
         'pt TypeName(left), TypeName(operator), TypeName(right)
         temp.Expr_init left, operator, right
         
         Dim tempcast As Expr
         st tempcast, temp
-        pt tempcast.accept(New AstPrinter)
-        Set expr_ = temp
+        'pt tempcast.accept(New AstPrinter)
+        st expr_, temp
     Wend
     
     Set term_ = expr_

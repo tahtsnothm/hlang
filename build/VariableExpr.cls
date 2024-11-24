@@ -21,3 +21,7 @@ End Function
 
 
 
+Private Function Expr_copy() As Variant
+st Expr_copy, Me
+End Function
+

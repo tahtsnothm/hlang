@@ -22,4 +22,14 @@ Public Function Expr_accept(visitor As ExprVisitor) As Variant
     st Expr_accept, visitor.visitCallExpr(Me)
 End Function
 
+Private Function Expr_copy() As Variant
+Dim temp As New CallExpr
 
+Dim newargs() As Variant
+Dim arg As Expr
+For Each arg In arguments
+    arad newargs, arg.copy()
+Next arg
+temp.init callee.copy(), paren, newargs
+st Expr_copy, temp
+End Function

@@ -30,10 +30,10 @@ Private Function parenthesize(ParamArray arr() As Variant) As String
     s = s + "("
     s = s + arr(0)
     
-    For i = 1 To al(arr) - 1
+    For i = al(arr) - 1 To 1 Step -1
         Dim expression As Expr
         st expression, arr(i)
-        'pt TypeName(expression)
+        pt (expression.accept(New AstPrinter))
         s = s + " "
         s = s + CStr(expression.accept(Me))
     Next i

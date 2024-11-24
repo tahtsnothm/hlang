@@ -15,6 +15,9 @@ Public functions As String
 Public inMain As Boolean
 Public indentLevel As Long
 Public indentType As String
+Public prevIndentLevel As Long
+
+Public current_function_name As String
 Private f As Object
 
 
@@ -25,7 +28,10 @@ Private Sub Class_Initialize()
     output_file_path = ThisWorkbook.path & "\out.bas"
     inMain = True
     indentLevel = 0
-    indentType = "  "
+    prevIndentLevel = 0
+    indentType = "    "
+    return_within_scope = False
+    current_function_name = "main"
     ' to change when classes are supported
 End Sub
 
@@ -38,13 +44,15 @@ Public Function generate(statements As Variant)
     st f, fso.CreateTextFile(output_file_path)
     
     write_ "public sub main ()"
-    indentLevel = 1
+    indent
     For i = 0 To al(statements) - 1
         st statement, statements(i)
         statement.accept Me
     Next i
-    indentLevel = 0
+    unindent
     write_ "end sub"
+    
+    write_ functions
     f.Close
 End Function
 Private Function indent()
@@ -54,7 +62,18 @@ Private Function unindent()
     indentLevel = indentLevel - 1
     If indentLevel < 0 Then indentLevel = 0
 End Function
-
+Private Function changescope(Optional fname As String = "")
+If (inMain) Then
+    prevIndentLevel = indentLevel
+    indentLevel = 0
+    inMain = False
+    current_function_name = fname
+Else
+    indentLevel = prevIndentLevel
+    inMain = True
+    current_function_name = "main"
+End If
+End Function
 Private Function write_(s As String)
     Dim i As Long
     For i = 0 To indentLevel - 1
@@ -68,8 +87,20 @@ Private Function write_(s As String)
     
 End Function
 
+Private Function ctyp(s As String)
+'cleans types from int/ string/ array/ to the proper types
+Select Case s
+    Case "int":
+        ctyp = "integer"
+    Case "array":
+        ctype = "variant"
+    Case Else:
+        ctyp = s
+End Select
+End Function
+
 Private Function ExprVisitor_visitAssignExpr(expression As AssignExpr) As Variant
-    st ExprVisitor_visitAssignExpr, CStr(expression.assignee.accept(Me)) & " = " & expression.value.accept(Me)
+    st ExprVisitor_visitAssignExpr, "st " & CStr(expression.assignee.accept(Me)) & ", " & expression.value.accept(Me)
 End Function
 
 Private Function ExprVisitor_visitBinaryExpr(expression As BinaryExpr) As Variant
@@ -108,7 +139,7 @@ End Function
 
 
 Private Function ExprVisitor_visitLogicalExpr(expression As LogicalExpr) As Variant
-    
+
 End Function
 
 Private Function ExprVisitor_visitUnaryExpr(expression As UnaryExpr) As Variant
@@ -146,6 +177,46 @@ End Function
 
 Private Function StmtVisitor_visitFunctionStmt(statement As FunctionStmt) As Variant
 
+changescope statement.name.m_lexeme
+
+Dim args As String: args = ""
+Dim i As Long
+For i = 0 To al(statement.params) - 1
+
+    Dim bywhat As String
+    If statement.parammethod(i) Then
+        bywhat = "byref"
+    Else
+        bywhat = "byval"
+    End If
+    Dim pname As Token: st pname, statement.params(i)
+    Dim ptype As Token: st ptype, statement.paramtypes(i)
+    Dim paramname As String: paramname = statement.params(i).m_lexeme
+    Dim paramtype As String: paramtype = statement.paramtypes(i).m_lexeme
+    args = args + bywhat + " " + paramname + " as " + ctyp(paramtype) + ", "
+
+Next i
+If al(statement.params) > 0 Then args = left(args, Len(args) - 2)
+If statement.returntype.m_lexeme = "void" Then
+    write_ "function " & statement.name.m_lexeme & "(" & args & ") "
+Else
+    write_ "function " & statement.name.m_lexeme & "(" & args & ") " & "as " & ctyp(statement.returntype.m_lexeme)
+End If
+indent
+
+Dim bodyLine As Stmt
+st i, 0
+While (i < al(statement.body))
+    st bodyLine, statement.body(i)
+    bodyLine.accept Me
+    i = i + 1
+Wend
+
+
+unindent
+write_ "end function"
+write_ vbLf
+changescope
 End Function
 
 Private Function StmtVisitor_visitIfStmt(statement As IfStmt) As Variant
@@ -167,13 +238,18 @@ Private Function StmtVisitor_visitPrintStmt(statement As PrintStmt) As Variant
 End Function
 
 Private Function StmtVisitor_visitReturnStmt(statement As ReturnStmt) As Variant
-
+    If (current_function_name = "") Then
+        pt "Error: line", statement.keyword.m_line, " Cannot return"
+    Else
+        write_ "st " & current_function_name & ", " & statement.value.accept(Me)
+    endiif
+    
 End Function
 
 Private Function StmtVisitor_visitVarStmt(statement As VarStmt) As Variant
-    Dim s As String: s = "dim " & statement.name.m_lexeme & " as " & statement.type_.m_lexeme
+    Dim s As String: s = "dim " & statement.name.m_lexeme & " as " & ctyp(statement.type_.m_lexeme)
     If statement.hasinitializer Then
-        s = s & ": " & statement.name.m_lexeme & " = " & statement.initializer.accept(Me)
+        s = s & ": st " & statement.name.m_lexeme & ", " & statement.initializer.accept(Me)
     End If
     write_ s
 End Function

@@ -1,16 +1,30 @@
 public sub main ()
-  dim i as int: i = 0
-  while (i < n)
-    if (first_cond and another_cond or anotheranother) then 
-      firstaction(1, 2, 3)
-    else
-      if (second_cond) then 
-        secondaction()
-      else
-        thirdcondition
-      endif
+    if (funcl5c2()) then 
+        pt ("eligible")
     endif
-    i = i + 1
-  wend
-  hello = (1 + 2 - 3 * 4 / 5) & "String"
 end sub
+
+private function funcl5c0() as Boolean
+    funcl5c0 = false
+    if (a.rank == "COL") then
+        if (a.cep >= "LTC") then
+            funcl5c0 = true
+        endif
+    endif
+end function
+private function funcl5c1() as Boolean
+    funcl5c1 = false
+    if (person != Nothing) then
+        if ((funcl5c0())) then
+            funcl5c1 = true
+        endif
+    endif
+end function
+private function funcl5c2() as Boolean
+    funcl5c2 = false
+    if (funcl5c1()) then
+        if (not a.retiring) then
+            funcl5c2 = true
+        endif
+    endif
+end function

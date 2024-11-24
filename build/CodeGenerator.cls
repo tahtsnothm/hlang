@@ -12,10 +12,12 @@ Implements StmtVisitor
 
 Public output_file_path As String
 Public functions As String
-Public inMain As Boolean
 Public indentLevel As Long
 Public indentType As String
-Public prevIndentLevel As Long
+Public ilevels As Variant
+Public scopes As Variant
+
+Public fcounter As Long
 
 Public current_function_name As String
 Private f As Object
@@ -26,12 +28,14 @@ Private Sub Class_Initialize()
     ' theres a main thread for stuff
     ' and another one for functions
     output_file_path = ThisWorkbook.path & "\out.bas"
-    inMain = True
     indentLevel = 0
-    prevIndentLevel = 0
-    indentType = "    "
-    return_within_scope = False
     current_function_name = "main"
+    
+    ilevels = Array(0) '
+    scopes = Array("main") ' just as a buffer for pop,
+    indentType = "    "
+    fcounter = 0
+    
     ' to change when classes are supported
 End Sub
 
@@ -62,24 +66,29 @@ Private Function unindent()
     indentLevel = indentLevel - 1
     If indentLevel < 0 Then indentLevel = 0
 End Function
-Private Function changescope(Optional fname As String = "")
-If (inMain) Then
-    prevIndentLevel = indentLevel
-    indentLevel = 0
-    inMain = False
-    current_function_name = fname
-Else
-    indentLevel = prevIndentLevel
-    inMain = True
-    current_function_name = "main"
-End If
+Private Function pushscope(Optional fname As String = "")
+
+arad ilevels, indentLevel
+arad scopes, current_function_name
+
+current_function_name = fname
+indentLevel = 0
+
 End Function
+Private Function popscope()
+indentLevel = ilevels(al(ilevels) - 1)
+pop ilevels, al(ilevels) - 1
+current_function_name = scopes(al(scopes) - 1)
+pop scopes, al(scopes) - 1
+
+End Function
+
 Private Function write_(s As String)
     Dim i As Long
     For i = 0 To indentLevel - 1
         s = indentType & s
     Next i
-    If inMain Then
+    If current_function_name = "main" Then
         f.WriteLine s
     Else
         functions = functions & vbLf & s
@@ -139,7 +148,28 @@ End Function
 
 
 Private Function ExprVisitor_visitLogicalExpr(expression As LogicalExpr) As Variant
-
+    Dim left As String: st left, expression.left.accept(Me)
+    Dim right As String: st right, expression.right.accept(Me)
+    Dim fname As String: fname = "funcl" & expression.operator.m_line & "c" & fcounter
+    fcounter = fcounter + 1
+    pushscope fname
+    'resolver please
+    write_ "private function " & fname & "()" & " as Boolean"
+    indent
+        write_ fname & " = false"
+        write_ "if (" & left & ") then"
+        indent
+            write_ "if (" & right & ") then"
+            indent
+                write_ fname & " = true"
+            unindent
+            write_ "endif"
+        unindent
+        write_ "endif"
+    unindent
+    write_ "end function"
+    popscope
+    st ExprVisitor_visitLogicalExpr, fname & "()"
 End Function
 
 Private Function ExprVisitor_visitUnaryExpr(expression As UnaryExpr) As Variant
@@ -172,12 +202,13 @@ Private Function StmtVisitor_visitCodeStmt(statement As CodeStmt) As Variant
 End Function
 
 Private Function StmtVisitor_visitExprStmt(statement As ExprStmt) As Variant
-    write_ statement.expression.accept(Me)
+
+    write_ "nt " & statement.expression.accept(Me)
 End Function
 
 Private Function StmtVisitor_visitFunctionStmt(statement As FunctionStmt) As Variant
 
-changescope statement.name.m_lexeme
+pushscope statement.name.m_lexeme
 
 Dim args As String: args = ""
 Dim i As Long
@@ -216,7 +247,7 @@ Wend
 unindent
 write_ "end function"
 write_ vbLf
-changescope
+popscope
 End Function
 
 Private Function StmtVisitor_visitIfStmt(statement As IfStmt) As Variant
@@ -241,8 +272,11 @@ Private Function StmtVisitor_visitReturnStmt(statement As ReturnStmt) As Variant
     If (current_function_name = "") Then
         pt "Error: line", statement.keyword.m_line, " Cannot return"
     Else
+        If (statement.hasValue) Then
         write_ "st " & current_function_name & ", " & statement.value.accept(Me)
-    endiif
+        End If
+        write_ "exit function"
+    End If
     
 End Function
 

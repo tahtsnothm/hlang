@@ -27,9 +27,11 @@ Dim temp As New CallExpr
 
 Dim newargs() As Variant
 Dim arg As Expr
-For Each arg In arguments
+Dim i As Long
+For i = 0 To al(arguments) - 1
+    st arg, arguments(i)
     arad newargs, arg.copy()
-Next arg
+Next i
 temp.Expr_init callee.copy(), paren, newargs
 st Expr_copy, temp
 End Function

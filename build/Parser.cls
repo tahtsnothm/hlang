@@ -174,10 +174,14 @@ Dim keyword As Token: st keyword, previous()
 Dim value As Expr
 Dim temp As New ReturnStmt
 If (Not check(SEMICOLON)) Then
-    temp.Stmt_init keyword, expression_(), True
+    st value, expression_()
+    temp.Stmt_init keyword, value, True
 Else
-    temp.Stmt_init keyword, Null, False
+    Dim faketemp As New LiteralExpr
+    faketemp.Expr_init "null"
+    temp.Stmt_init keyword, faketemp, False
 End If
+consume SEMICOLON, "Expected ';' after return"
 st returnStatement_f, temp
 End Function
 Private Function codeStatement_f()
@@ -471,7 +475,7 @@ Private Function term_()
     While (match(MINUS, PLUS, AMPERSAND))
         Dim operator As Token
         Set operator = previous()
-        Dim left As New Expr
+        Dim left As Expr
         st left, expr_.copy()
         
         Dim right As Expr
@@ -573,6 +577,10 @@ If (match(FALSE_)) Then
 ElseIf (match(TRUE_)) Then
 
     temp.Expr_init True
+    Set primary_ = temp
+    Exit Function
+ElseIf (match(NULL_)) Then
+    temp.Expr_init "null"
     Set primary_ = temp
     Exit Function
 ElseIf (match(NUMBER_, STRING_)) Then

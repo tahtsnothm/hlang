@@ -1284,3 +1284,7 @@ If IsObject(item) Then
         obj = item
     End If
 End Function
+
+Function nt(ByVal n As Variant)
+' does nothing
+End Function

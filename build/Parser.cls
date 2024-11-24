@@ -164,6 +164,7 @@ Private Function statement_f()
     End If
     If (match(RAW_)) Then
         st statement_f, codeStatement_f()
+        Exit Function
     End If
     st statement_f, expressionStatement_f()
 End Function
@@ -184,7 +185,7 @@ Dim codeblock As Token
 st codeblock, previous()
 
 Dim temp As New CodeStmt
-temp.Stmt_init codeblock.m_lexeme
+temp.Stmt_init codeblock.m_literal
 st codeStatement_f, temp
 End Function
 Private Function forStatement_f()
@@ -449,7 +450,7 @@ End Function
 Private Function term_()
     Dim expr_ As Expr
     Set expr_ = factor_()
-    While (match(MINUS, PLUS))
+    While (match(MINUS, PLUS, AMPERSAND))
         Dim operator As Token
         Set operator = previous()
         Dim left As New Expr

@@ -50,6 +50,8 @@ Enum tokentype
     VAR_
     WHILE_
     
+    BRANCHING_AND_
+    
     EOF_
     
 

@@ -1,3 +1,12 @@
-func variant skibidi(int &a, int b) {
-	a = b;
+
+for (int i = 0; i < n; i += 1) {
+if (first_cond) {
+	firstaction(1, 2,3);
+} else if (second_cond) {
+	secondaction();
+} else {
+	thirdcondition;
 }
+}
+
+hello = (1 + 2 - 3 * 4 / 5 ) & "String";

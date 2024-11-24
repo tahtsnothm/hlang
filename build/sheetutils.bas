@@ -631,7 +631,7 @@ Set objmail = objoutlook.CreateItem(olMailItem)
 '
 objmail.BodyFormat = olFormatPlain
 'change format for html
-objmail.To = person
+objmail.to = person
 objmail.cc = cc
 
 If IsMissing(replacements) Then
@@ -660,7 +660,7 @@ Set objmail = objoutlook.CreateItem(olMailItem)
 '
 objmail.BodyFormat = olFormatHTML
 'change format for html
-objmail.To = person
+objmail.to = person
 objmail.cc = cc
 
 If IsMissing(replacements) Then
@@ -691,7 +691,7 @@ Const ATTACH_STUFF = "http://schemas.microsoft.com/mapi/proptag/0x3712001F"
 Dim oatch As Outlook.attachment
 
 objmail.BodyFormat = olFormatHTML
-objmail.To = person
+objmail.to = person
 objmail.cc = cc
 
 Dim attcarr() As Variant
@@ -756,7 +756,7 @@ Const ATTACH_STUFF = "http://schemas.microsoft.com/mapi/proptag/0x3712001F"
 Dim oatch As Outlook.attachment
 
 objmail.BodyFormat = olFormatPlain
-objmail.To = person
+objmail.to = person
 objmail.cc = cc
 
 Dim attcarr() As Variant

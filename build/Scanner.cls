@@ -93,7 +93,12 @@ Private Function scanToken()
             Else
                 addToken STAR
             End If
-        Case "&": addToken AMPERSAND
+        Case "&":
+            If match("&") Then
+                addToken BRANCHING_AND_
+            Else
+                addToken AMPERSAND
+            End If
         Case "#": raw_code_f
         Case "!":
             If match("=") Then

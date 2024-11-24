@@ -78,6 +78,9 @@ If hadError Then
 End If
 Dim astp As New AstPrinter
 astp.prt statements
+
+Dim gen As New CodeGenerator
+gen.generate statements
 'For Each tk In tokens
  '   pt tk.toString()
 'Next tk

@@ -23,7 +23,7 @@ End Function
 Private Function Expr_copy() As Variant
 Dim temp As New UnaryExpr
 
-temp.init operator, right.copy()
+temp.Expr_init operator, right.copy()
 st Expr_copy, temp
 End Function
 

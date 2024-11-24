@@ -21,6 +21,6 @@ Public Function Expr_accept(visitor As ExprVisitor) As Variant
 End Function
 Private Function Expr_copy() As Variant
 Dim temp As New GroupingExpr
-temp.init expression.copy()
+temp.Expr_init expression.copy()
 st Expr_copy, temp
 End Function

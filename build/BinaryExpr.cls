@@ -24,6 +24,6 @@ End Function
 
 Private Function Expr_copy() As Variant
 Dim temp As New BinaryExpr
-temp.init left.copy(), operator, right.copy()
+temp.Expr_init left.copy(), operator, right.copy()
 st Expr_copy, temp
 End Function

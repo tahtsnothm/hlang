@@ -30,6 +30,6 @@ Dim arg As Expr
 For Each arg In arguments
     arad newargs, arg.copy()
 Next arg
-temp.init callee.copy(), paren, newargs
+temp.Expr_init callee.copy(), paren, newargs
 st Expr_copy, temp
 End Function

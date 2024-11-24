@@ -1,6 +1,7 @@
 
 for (int i = 0; i < n; i += 1) {
-if (first_cond) {
+	
+if (first_cond and another_cond or anotheranother) {
 	firstaction(1, 2,3);
 } else if (second_cond) {
 	secondaction();

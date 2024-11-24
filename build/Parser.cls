@@ -325,7 +325,7 @@ End Function
 
 Private Function assignment_()
     Dim expr_ As New Expr
-    st expr_, or_f()
+    st expr_, br_and_f()
     Dim eqs As New Token
     Dim value As Expr
     Dim temp As New AssignExpr
@@ -372,6 +372,24 @@ Private Function assignment_()
     st assignment_, expr_
 End Function
 
+Private Function br_and_f()
+'branching and
+    Dim expr_ As New Expr
+    st expr_, or_f()
+    While (match(BRANCHING_AND_))
+        Dim operator As New Token
+        st operator, previous()
+        
+        Dim right As New Expr
+        st right, or_f()
+        
+        Dim temp As New LogicalExpr
+        temp.Expr_init expr_.copy(), operator, right
+        st expr_, temp
+    Wend
+    st br_and_f, expr_
+End Function
+
 Private Function or_f()
     Dim expr_ As New Expr
     st expr_, and_f()
@@ -381,9 +399,9 @@ Private Function or_f()
         st operator, previous()
         
         Dim right As New Expr
-        st right, equality_()
+        st right, and_f()
         
-        Dim temp As New LogicalExpr
+        Dim temp As New BinaryExpr
         Dim prevExpr As New Expr
         st prevExpr, expr_
         temp.Expr_init prevExpr.copy(), operator, right
@@ -403,7 +421,7 @@ Private Function and_f()
         Dim right As New Expr
         st right, equality_()
         
-        Dim temp As New LogicalExpr
+        Dim temp As New BinaryExpr
         Dim prevExpr As New Expr
         st prevExpr, expr_
         temp.Expr_init prevExpr.copy(), operator, right

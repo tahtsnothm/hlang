@@ -69,7 +69,7 @@ Private Function write_(s As String)
 End Function
 
 Private Function ExprVisitor_visitAssignExpr(expression As AssignExpr) As Variant
-    st ExprVisitor_visitAssignExpr, CStr(expression.assignee.accept(Me)) & " = " & CStr(expression.value.accept(Me))
+    st ExprVisitor_visitAssignExpr, CStr(expression.assignee.accept(Me)) & " = " & expression.value.accept(Me)
 End Function
 
 Private Function ExprVisitor_visitBinaryExpr(expression As BinaryExpr) As Variant
@@ -91,11 +91,19 @@ End Function
 
 Private Function ExprVisitor_visitGroupingExpr(expression As GroupingExpr) As Variant
     'is this really needed half the time but sure
-    st ExprVisitor_visitGroupingExpr, "(" & expression.Expr_accept(Me) & ")"
+    st ExprVisitor_visitGroupingExpr, "(" & expression.expression.copy().Expr_accept(Me) & ")"
 End Function
 
 Private Function ExprVisitor_visitLiteralExpr(expression As LiteralExpr) As Variant
-    st ExprVisitor_visitLiteralExpr, CStr(expression.value)
+    If (expression.value = Null) Then
+        ExprVisitor_visitLiteralExpr = "null"
+    Else
+        If (TypeName(expression.value) = "String") Then
+            ExprVisitor_visitLiteralExpr = """" & expression.value & """"
+        Else
+            ExprVisitor_visitLiteralExpr = expression.value
+        End If
+    End If
 End Function
 
 

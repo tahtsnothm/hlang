@@ -94,7 +94,7 @@ Private Function scanToken()
                 addToken STAR
             End If
         Case "&": addToken AMPERSAND
-        Case "#": addToken HASHTAG
+        Case "#": raw_code_f
         Case "!":
             If match("=") Then
                 addToken BANG_EQUAL
@@ -186,6 +186,27 @@ Private Function peek() As String
     End If
     peek = substring(m_source, m_current, m_current + 1)
 End Function
+Private Function raw_code_f()
+
+While (peek() <> "#" And Not isAtEnd())
+    If peek() = vbLf Then
+        m_line = m_line + 1
+    End If
+    advance
+Wend
+If (isAtEnd()) Then
+    m_h.error m_line, "Unterminated Raw Code Block"
+    Exit Function
+End If
+
+advance ' closing #
+Dim value As String
+value = substring(m_source, m_start + 1, m_current - 1)
+'value = Mid(m_source, m_start + 2, m_current - 1 - (m_start + 1) + 1) ' convoluted
+addTokenInternal RAW_, value
+
+End Function
+
 Private Function string_f()
 While (peek() <> """" And Not isAtEnd())
     If peek() = vbLf Then

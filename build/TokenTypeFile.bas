@@ -31,6 +31,7 @@ Enum tokentype
     STRING_
     NUMBER_
     VARTYPE_
+    RAW_
     
     AND_
     CLASS_

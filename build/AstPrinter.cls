@@ -30,7 +30,7 @@ Private Function parenthesize(ParamArray arr() As Variant) As String
     s = s + "("
     s = s + arr(0)
     
-    For i = al(arr) - 1 To 1 Step -1
+    For i = 1 To al(arr) - 1
         Dim expression As Expr
         st expression, arr(i)
         'pt (expression.accept(New AstPrinter))
@@ -136,6 +136,14 @@ Private Function StmtVisitor_visitBlockStmt(statement As BlockStmt) As Variant
     st StmtVisitor_visitBlockStmt, parenthesizelots("block", statement.statements)
 End Function
 
+Private Function StmtVisitor_visitClassStmt(statement As ClassStmt) As Variant
+    st StmtVisitor_visitClassStmt, "class"
+End Function
+
+Private Function StmtVisitor_visitCodeStmt(statement As CodeStmt) As Variant
+    st StmtVisitor_visitCodeStmt, statement.code
+End Function
+
 Private Function StmtVisitor_visitExprStmt(statement As ExprStmt) As Variant
     st StmtVisitor_visitExprStmt, statement.expression.accept(Me)
 End Function
@@ -174,6 +182,10 @@ End Function
 
 Private Function StmtVisitor_visitPrintStmt(statement As PrintStmt) As Variant
     st StmtVisitor_visitPrintStmt, parenthesize("print", statement.expression)
+End Function
+
+Private Function StmtVisitor_visitReturnStmt(statement As ReturnStmt) As Variant
+    st StmtVisitor_visitReturnStmt, "return"
 End Function
 
 Private Function StmtVisitor_visitVarStmt(statement As VarStmt) As Variant

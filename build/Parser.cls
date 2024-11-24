@@ -31,10 +31,28 @@ Private Function declaration_f()
     ElseIf (match(FUNC_)) Then
             st declaration_f, function_("function")
             Exit Function
+     ElseIf (match(CLASS_)) Then
+        st declaration_f, classDeclaration_f()
+        Exit Function
     End If
     
     st declaration_f, statement_f()
     
+End Function
+Private Function classDeclaration_f()
+ Dim name As Token
+st name, consume(IDENTIFIER, "Expect class name.")
+consume LEFT_BRACE, "Expect '{' before class body"
+Dim methods() As Variant
+While (Not check(RIGHT_BRACE) And Not isAtEnd())
+    arad methods, function_("method")
+Wend
+
+consume RIGHT_BRACE, "Expect '}' after class body."
+
+Dim temp As New ClassStmt
+temp.Stmt_init name, methods
+        
 End Function
 
 Private Function function_(kind As String)
@@ -46,6 +64,7 @@ Private Function function_(kind As String)
     
     consume LEFT_PAREN, "Expected '(' after " & kind & " name."
     Dim parameters() As Variant
+    Dim parammethods() As Variant
     Dim parametertypes() As Variant
     If (Not check(RIGHT_PAREN)) Then
         Do
@@ -53,6 +72,11 @@ Private Function function_(kind As String)
                 err peek(), "Can't have more than 255 parameters"
             End If
             arad parametertypes, consume(IDENTIFIER, "Expected parameter type.")
+            If (match(AMPERSAND)) Then
+                arad parammethods, True
+            Else
+                arad parammethods, False
+            End If
             arad parameters, consume(IDENTIFIER, "Expected parameter name.")
         Loop While (match(COMMA))
         
@@ -64,7 +88,7 @@ Private Function function_(kind As String)
     Dim body As Variant
     st body, block_f()
     Dim temp As New FunctionStmt
-    temp.Stmt_init name, returntype, parameters, parametertypes, body
+    temp.Stmt_init name, returntype, parameters, parametertypes, parammethods, body
     st function_, temp
     
     
@@ -134,10 +158,35 @@ Private Function statement_f()
         st statement_f, forStatement_f()
         Exit Function
     End If
-    
+    If (match(RETURN_)) Then
+        st statement_f, returnStatement_f()
+        Exit Function
+    End If
+    If (match(RAW_)) Then
+        st statement_f, codeStatement_f()
+    End If
     st statement_f, expressionStatement_f()
 End Function
 
+Private Function returnStatement_f()
+Dim keyword As Token: st keyword, previous()
+Dim value As Expr
+Dim temp As New ReturnStmt
+If (Not check(SEMICOLON)) Then
+    temp.Stmt_init keyword, expression_(), True
+Else
+    temp.Stmt_init keyword, Null, False
+End If
+st returnStatement_f, temp
+End Function
+Private Function codeStatement_f()
+Dim codeblock As Token
+st codeblock, previous()
+
+Dim temp As New CodeStmt
+temp.Stmt_init codeblock.m_lexeme
+st codeStatement_f, temp
+End Function
 Private Function forStatement_f()
     consume LEFT_PAREN, "Expected '(' after 'for'"
     

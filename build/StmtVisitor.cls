@@ -24,3 +24,11 @@ End Function
 
 Public Function visitFunctionStmt(statement As FunctionStmt)
 End Function
+Public Function visitClassStmt(statement As ClassStmt)
+End Function
+
+Public Function visitCodeStmt(statement As CodeStmt)
+End Function
+
+Public Function visitReturnStmt(statement As ReturnStmt)
+End Function

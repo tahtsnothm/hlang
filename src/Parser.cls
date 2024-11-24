@@ -1,0 +1,474 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "Parser"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = False
+Attribute VB_Exposed = False
+Private tokens As Variant
+Private current As Long
+Private m_h As H
+
+Public Function init(tokens_ As Variant, hh As H)
+tokens = tokens_
+current = 0
+Set m_h = hh
+End Function
+
+Public Function parse()
+    Dim statements() As Variant
+    While (Not isAtEnd())
+        arad statements, declaration_f()
+    Wend
+    st parse, statements
+End Function
+Private Function declaration_f()
+    If (isTypeName(peek())) Then
+        st declaration_f, varDeclaration_f()
+        Exit Function
+    End If
+    
+    st declaration_f, statement_f()
+    
+End Function
+Private Function isTypeName(tk As Token)
+
+    If tk.m_type_ = IDENTIFIER Then
+        Select Case tk.m_lexeme
+        Case "int":
+            isTypeName = True
+        Case "string":
+            isTypeName = True
+        Case "bool":
+            isTypeName = True
+        Case "long":
+            isTypeName = True
+        
+        End Select
+        
+    Else
+        isTypeName = False
+    End If
+    
+End Function
+Private Function varDeclaration_f()
+    Dim varType As Token
+    st varType, consume(IDENTIFIER, "Expected type before variable name")
+    Dim varName As Token
+
+    st varName, consume(IDENTIFIER, "Expected variable name")
+    Dim initializer As Expr
+    
+    
+    Dim temp As New VarStmt
+    If (match(EQUAL)) Then
+        st initializer, expression_()
+        temp.Stmt_init varType, varName, initializer
+    Else
+        temp.Stmt_init varType, varName 'do we need a null node hmm (no thats in the codeGen, for the init function to handle the boolean)
+    End If
+    consume SEMICOLON, "Expect ';' after variable declaration"
+    st varDeclaration_f, temp
+End Function
+Private Function statement_f()
+    If (match(IF_)) Then
+        st statement_f, ifStatement_f()
+        Exit Function
+    End If
+    If (match(PRINT_)) Then
+        st statement_f, printStatement_f()
+        Exit Function
+    End If
+    If (match(LEFT_BRACE)) Then
+        st statement_f, block_f()
+        Exit Function
+    End If
+
+    If (match(WHILE_)) Then
+        st statement_f, whileStatement_f()
+        Exit Function
+    End If
+    
+    If (match(FOR_)) Then
+        st statement_f, forStatement_f()
+        Exit Function
+    End If
+    st statement_f, expressionStatement_f()
+End Function
+
+Private Function forStatement_f()
+    consume LEFT_PAREN, "Expected '(' after 'for'"
+    
+    Dim initializer As Stmt
+    Dim hasinitializer As Boolean: hasinitializer = True
+    If (match(SEMICOLON)) Then
+        hasinitializer = False
+    ElseIf isTypeName(peek()) Then
+        st initializer, varDeclaration_f()
+    Else
+        st initializer, expressionStatement_f()
+    End If
+    
+    Dim condition As Expr
+    Dim hascondition As Boolean: hascondition = False
+    If (Not check(SEMICOLON)) Then
+        st condition, expression_()
+        hascondition = True
+    End If
+    consume SEMICOLON, "Expect ';' after loop condition"
+    
+    Dim increment As Expr
+    Dim hasincrement As Boolean: hasincrement = False
+    If (Not check(RIGHT_PAREN)) Then
+        st increment, expression_()
+        hasincrement = True
+    End If
+    consume RIGHT_PAREN, "Expected ')' after 'for' clauses"
+    
+    
+    Dim body As Stmt
+    st body, statement_f()
+    
+    If (hasincrement) Then
+        Dim temp As New BlockStmt
+        Dim tempinner As New ExprStmt
+        tempinner.Stmt_init increment
+        temp.Stmt_init Array(body, tempinner)
+        st body, temp
+    End If
+    
+    If (Not hascondition) Then
+        Dim tmp As New LiteralExpr
+        tmp.Expr_init True
+        st condition, tmp
+        
+    End If
+    Dim tempwhile As New WhileStmt
+    tempwhile.Stmt_init condition, body
+    st body, tempwhile
+    
+    If (hasinitializer) Then
+        Dim temptemp As New BlockStmt
+        temptemp.Stmt_init Array(initializer, body)
+        st forStatement_f, temptemp
+    Else
+        st forStatement_f, body
+    End If
+    
+End Function
+
+Private Function whileStatement_f()
+    consume LEFT_PAREN, "Expected '(' after 'while'"
+    Dim condition As New Expr
+    st condition, expression_()
+    
+    consume RIGHT_PAREN, "Expected ')' after while condition"
+    Dim body As New Expr
+    st body, expression_()
+    Dim temp As New WhileStmt
+    temp.Stmt_init condition, body
+    
+    st whileStatement_f, temp
+End Function
+
+Private Function ifStatement_f()
+    consume LEFT_PAREN, "Expected '(' after 'if'."
+    Dim condition As New Expr
+    st condition, expression_f()
+    consume RIGHT_PAREN, "Expected ')' after condition"
+    
+    Dim thenBranch As New Stmt
+    Dim elseBranch As Stmt
+    st thenBranch, statement_f()
+
+    Dim temp As New IfStmt
+    If (match(ELSE_)) Then
+        st elseBranch, statement_f()
+        temp.Stmt_init condition, thenBranch, elseBranch
+    Else
+        temp.Stmt_init condition, thenBranch
+    End If
+    
+    st ifStatement_f, temp
+
+End Function
+
+
+Private Function printStatement_f()
+    Dim val As Expr
+    st val, expression_()
+    consume SEMICOLON, "Expect ';' after value"
+    Dim temp As New PrintStmt
+    temp.Stmt_init val
+    st printStatement_f, temp
+End Function
+
+Private Function expressionStatement_f()
+    Dim expr_ As New Expr
+    st expr_, expression_()
+    consume SEMICOLON, "Expect ';' after value"
+    Dim temp As New ExprStmt
+    temp.Stmt_init expr_
+    st printStatement_, temp
+End Function
+
+Private Function block_f()
+    Dim statements() As Variant
+    While (Not check(RIGHT_BRACE) And Not isAtEnd())
+        Dim temp As New Stmt
+        st temp, declaration_f()
+        arad statements, temp
+    Wend
+    consume RIGHT_BRACE, "Expect '}' after block"
+    
+    Dim blocknode As New BlockStmt
+    blocknode.Stmt_init statements
+    st block_f, blocknode
+End Function
+
+Private Function expression_() As Expr
+    Set expression_ = assignment_()
+End Function
+Private Function expression_f() As Expr
+    Set expression_f = assignment_()
+End Function
+
+Private Function assignment_()
+    Dim expr_ As New Expr
+    st expr_, or_f()
+    
+    If match(EQUAL) Then
+        Dim eqs As New Token
+        st eqs, previous()
+        
+        Dim value As New Expr
+        st value, assignment_()
+        If (TypeName(expr_) = "VariableExpr") Then
+            Dim varexprcast As VariableExpr
+            st varexprcast, expr_
+            Dim name As New Token
+            st name, varexprcast.name
+            
+            Dim temp As New AssignExpr
+            temp.Expr_init name, value
+        End If
+        'raise error here
+
+    End If
+    
+    st assignment_, expr_
+End Function
+
+Private Function or_f()
+    Dim expr_ As New Expr
+    st expr_, and_f()
+    
+    While (match(OR_))
+        Dim operator As New Token
+        st operator, previous()
+        
+        Dim right As New Expr
+        st right, equality_()
+        
+        Dim temp As New LogicalExpr
+        Dim prevExpr As New Expr
+        st prevExpr, expr_
+        temp.Expr_init prevExpr, operator, right
+        st expr_, temp
+    Wend
+    st or_f, expr_
+End Function
+
+Private Function and_f()
+     Dim expr_ As New Expr
+    st expr_, equality_()
+    
+    While (match(AND_))
+        Dim operator As New Token
+        st operator, previous()
+        
+        Dim right As New Expr
+        st right, equality_()
+        
+        Dim temp As New LogicalExpr
+        Dim prevExpr As New Expr
+        st prevExpr, expr_
+        temp.Expr_init prevExpr, operator, right
+        st expr_, temp
+    Wend
+    
+    st and_f, expr_
+End Function
+
+Private Function equality_()
+    Dim expr_ As Expr
+    Set expr_ = comparison_()
+    
+    While (match(BANG_EQUAL, EQUAL_EQUAL))
+        Dim operator As Token
+        Set operator = previous()
+        Dim right As Expr
+        Set right = comparison_()
+        Dim temp As New BinaryExpr
+        temp.Expr_init expr_, operator, right
+        Set expr_ = temp
+    Wend
+    
+    Set equality_ = expr_
+End Function
+
+Private Function comparison_()
+    Dim expr_ As Expr
+    Set expr_ = term_()
+    
+    While (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL))
+        Dim operator As Token
+        Set operator = previous()
+        Dim right As Expr
+        Set right = term_()
+        Dim temp As New BinaryExpr
+        temp.Expr_init expr_, operator, right
+        Set expr_ = temp
+    Wend
+    
+    Set comparison_ = expr_
+End Function
+
+Private Function term_()
+    Dim expr_ As Expr
+    Set expr_ = factor_()
+    While (match(MINUS, PLUS))
+        Dim operator As Token
+        Set operator = previous()
+        Dim right As Expr
+        Set right = factor_()
+        Dim temp As New BinaryExpr
+        temp.Expr_init expr_, operator, right
+        Set expr_ = temp
+    Wend
+    
+    Set term_ = expr_
+End Function
+
+Private Function factor_()
+    Dim expr_ As Expr
+    Set expr_ = unary_()
+    While (match(SLASH, STAR))
+        Dim operator As Token
+        Set operator = previous()
+        Dim right As Expr
+        Set right = unary_()
+        Dim temp As New BinaryExpr
+        temp.Expr_init expr_, operator, right
+        Set expr_ = temp
+    Wend
+    
+    Set factor_ = expr_
+End Function
+Private Function unary_()
+    Dim expr_ As Expr
+    If (match(BANG, MINUS)) Then
+        Dim operator As Token
+        Set operator = previous()
+        Dim right As Expr
+        Set right = unary_()
+        Dim temp As New UnaryExpr
+        temp.Expr_init operator, right
+        Set expr_ = temp
+    Else
+        Set expr_ = primary_()
+    End If
+    
+    Set unary_ = expr_
+End Function
+Private Function primary_()
+Dim temp As New LiteralExpr
+If (match(FALSE_)) Then
+    
+    temp.Expr_init False
+    Set primary_ = temp
+    Exit Function
+ElseIf (match(TRUE_)) Then
+
+    temp.Expr_init True
+    Set primary_ = temp
+    Exit Function
+ElseIf (match(NUMBER_, STRING_)) Then
+
+    temp.Expr_init previous().m_literal
+    Set primary_ = temp
+    Exit Function
+ElseIf match(LEFT_PAREN) Then
+    Dim expr_ As Expr
+    Set expr_ = expression_()
+    consume RIGHT_PAREN, "Expect ')' after expression."
+    Dim tempp As New GroupingExpr
+    tempp.Expr_init expr_
+    Set primary_ = tempp
+    Exit Function
+ElseIf match(IDENTIFIER) Then
+    Dim temppp As New VariableExpr
+    temppp.Expr_init previous()
+    st primary_, temppp
+    Exit Function
+End If
+
+    err peek(), "Unexpected Token"
+End Function
+
+Private Function match(ParamArray arr() As Variant) As Boolean
+    Dim typ As Variant
+    For Each typ In arr
+        Dim ttyp As tokentype
+        ttyp = typ
+        If (check(ttyp)) Then
+            advance
+            match = True
+            Exit Function
+        End If
+    Next typ
+    match = False
+End Function
+Private Function check(typ As tokentype) As Boolean
+If (isAtEnd()) Then
+    check = False
+    Exit Function
+End If
+check = peek().m_type_ = typ
+End Function
+
+Private Function advance() As Token
+    If (Not isAtEnd()) Then
+     current = current + 1
+    End If
+    
+    Set advance = previous()
+End Function
+
+Private Function isAtEnd() As Boolean
+isAtEnd = peek().m_type_ = EOF_
+End Function
+
+Private Function peek() As Token
+    Set peek = tokens(current)
+End Function
+
+Private Function previous() As Token
+    Set previous = tokens(current - 1)
+End Function
+
+Private Function consume(typ As tokentype, message As String)
+    If (check(typ)) Then
+        st consume, peek()
+        advance
+        Exit Function
+    End If
+    
+    err peek(), message
+End Function
+Private Function err(tk As Token, message As String)
+    m_h.err tk, message
+    
+End Function

@@ -276,27 +276,47 @@ End Function
 Private Function assignment_()
     Dim expr_ As New Expr
     st expr_, or_f()
-    
+    Dim eqs As New Token
+    Dim value As Expr
+    Dim temp As New AssignExpr
+    Dim tempbinary As New BinaryExpr
+    Dim ops As New Token
     If match(EQUAL) Then
-        Dim eqs As New Token
-        st eqs, previous()
         
-        Dim value As Expr
+        st eqs, previous()
         st value, assignment_()
         If (TypeName(expr_) = "VariableExpr") Then
-            Dim temp As New AssignExpr
+            temp.Expr_init expr_, value
+            st expr_, temp
+        ElseIf (TypeName(expr_) = "CallExpr") Then
             temp.Expr_init expr_, value
             st expr_, temp
         End If
-        
-        If (TypeName(expr_) = "CallExpr") Then
-
-            Dim tempe As New AssignExpr
-            tempe.Expr_init expr_, value
-            st expr_, tempe
-        End If
         'raise error here
-
+    ElseIf match(PLUS_EQUAL) Then
+        ops.init PLUS, "+", Null, previous.m_line
+        st value, assignment_()
+        tempbinary.Expr_init expr_.copy(), ops, value 'minor bug if expr_ (LHS of assignment) is not pure
+        temp.Expr_init expr_, tempbinary
+        st expr_, temp
+    ElseIf match(MINUS_EQUAL) Then
+        ops.init MINUS, "-", Null, previous.m_line
+        st value, assignment_()
+        tempbinary.Expr_init expr_.copy(), ops, value 'minor bug if expr_ (LHS of assignment) is not pure
+        temp.Expr_init expr_, tempbinary
+        st expr_, temp
+    ElseIf match(STAR_EQUAL) Then
+        ops.init STAR, "*", Null, previous.m_line
+        st value, assignment_()
+        tempbinary.Expr_init expr_.copy(), ops, value 'minor bug if expr_ (LHS of assignment) is not pure
+        temp.Expr_init expr_, tempbinary
+        st expr_, temp
+    ElseIf match(SLASH_EQUAL) Then
+        ops.init SLASH, "/", Null, previous.m_line
+        st value, assignment_()
+        tempbinary.Expr_init expr_.copy(), ops, value 'minor bug if expr_ (LHS of assignment) is not pure
+        temp.Expr_init expr_, tempbinary
+        st expr_, temp
     End If
     
     st assignment_, expr_
@@ -316,7 +336,7 @@ Private Function or_f()
         Dim temp As New LogicalExpr
         Dim prevExpr As New Expr
         st prevExpr, expr_
-        temp.Expr_init prevExpr, operator, right
+        temp.Expr_init prevExpr.copy(), operator, right
         st expr_, temp
     Wend
     st or_f, expr_
@@ -336,7 +356,7 @@ Private Function and_f()
         Dim temp As New LogicalExpr
         Dim prevExpr As New Expr
         st prevExpr, expr_
-        temp.Expr_init prevExpr, operator, right
+        temp.Expr_init prevExpr.copy(), operator, right
         st expr_, temp
     Wend
     
@@ -353,7 +373,7 @@ Private Function equality_()
         Dim right As Expr
         Set right = comparison_()
         Dim temp As New BinaryExpr
-        temp.Expr_init expr_, operator, right
+        temp.Expr_init expr_.copy(), operator, right
         Set expr_ = temp
     Wend
     
@@ -370,7 +390,7 @@ Private Function comparison_()
         Dim right As Expr
         Set right = term_()
         Dim temp As New BinaryExpr
-        temp.Expr_init expr_, operator, right
+        temp.Expr_init expr_.copy(), operator, right
         Set expr_ = temp
     Wend
     
@@ -414,7 +434,7 @@ Private Function factor_()
         Set right = unary_()
         Dim temp As New BinaryExpr
         Dim left As New Expr
-        st left, expr_
+        st left, expr_.copy()
         temp.Expr_init left, operator, right
         Set expr_ = temp
     Wend
@@ -446,7 +466,7 @@ Dim exitwhile As Boolean: exitwhile = False
 While Not exitwhile
     If (match(LEFT_PAREN)) Then
         Dim temp As Expr
-        st temp, finishCall(expr_)
+        st temp, finishCall(expr_.copy())
         st expr_, temp
     Else
         exitwhile = True

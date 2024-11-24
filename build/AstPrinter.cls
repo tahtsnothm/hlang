@@ -33,7 +33,7 @@ Private Function parenthesize(ParamArray arr() As Variant) As String
     For i = al(arr) - 1 To 1 Step -1
         Dim expression As Expr
         st expression, arr(i)
-        pt (expression.accept(New AstPrinter))
+        'pt (expression.accept(New AstPrinter))
         s = s + " "
         s = s + CStr(expression.accept(Me))
     Next i

@@ -87,7 +87,12 @@ Private Function scanToken()
                 addToken PLUS
             End If
         Case ";": addToken SEMICOLON
-        Case "*": addToken STAR
+        Case "*":
+            If match("=") Then
+                addToken STAR_EQUAL
+            Else
+                addToken STAR
+            End If
         Case "&": addToken AMPERSAND
         Case "#": addToken HASHTAG
         Case "!":
@@ -119,7 +124,8 @@ Private Function scanToken()
                 While (peek() <> vbLf And Not isAtEnd()) ' NEWLINE CHARACTER POTENTIAL SOURCE OF ISSUES
                     advance
                 Wend
-                
+            ElseIf match("=") Then
+                addToken SLASH_EQUAL
             ElseIf (match("*")) Then
                 blockcomment_f
             Else

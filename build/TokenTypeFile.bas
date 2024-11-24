@@ -16,6 +16,8 @@ Enum tokentype
     
     PLUS_EQUAL
     MINUS_EQUAL
+    SLASH_EQUAL
+    STAR_EQUAL
     BANG
     BANG_EQUAL
     EQUAL

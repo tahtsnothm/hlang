@@ -2,7 +2,15 @@
 
 
 
-if (person != Nothing && (a.rank == "COL" && a.cep >= "LTC" ) && !a.retiring) print("eligible");
+//if (person != Nothing && (a.rank == "COL" && a.cep >= "LTC" ) && !a.retiring) print("eligible");
+
+
+func int fibonacci (int n) {
+	if (n <= 1) return 1;
+	return fibonacci(n - 1) + fibonacci(n-2);
+}
+
+print fibonacci(10);
 
 /*
 for (int i = 0; i == n; i += 1) {

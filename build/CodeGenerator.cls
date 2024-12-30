@@ -101,19 +101,23 @@ Private Function ctyp(s As String)
 Select Case s
     Case "int":
         ctyp = "integer"
+    Case "bool":
+        ctyp = "boolean"
     Case "array":
-        ctype = "variant"
+        ctyp = "variant"
+    Case "void":
+        ctyp = "variant"
     Case Else:
         ctyp = s
 End Select
 End Function
 
 Private Function ExprVisitor_visitAssignExpr(expression As AssignExpr) As Variant
-    st ExprVisitor_visitAssignExpr, "st " & CStr(expression.assignee.accept(Me)) & ", " & expression.value.accept(Me)
+    st ExprVisitor_visitAssignExpr, "st (" & CStr(expression.assignee.accept(Me)) & ", " & expression.value.accept(Me) & ")"
 End Function
 
 Private Function ExprVisitor_visitBinaryExpr(expression As BinaryExpr) As Variant
-    
+    If (expression.operator.m_lexeme = "==") Then expression.operator.m_lexeme = "="
     st ExprVisitor_visitBinaryExpr, expression.left.accept(Me) & " " & expression.operator.m_lexeme & " " & expression.right.accept(Me)
 End Function
 
@@ -202,8 +206,33 @@ Private Function StmtVisitor_visitCodeStmt(statement As CodeStmt) As Variant
 End Function
 
 Private Function StmtVisitor_visitExprStmt(statement As ExprStmt) As Variant
+    If (TypeName(statement.expression) = "CallExpr") Then
+        write_ "call " & statement.expression.accept(Me)
+    Else
+        write_ "nt " & statement.expression.accept(Me)
+    End If
+    
+    'write_ "nt " & statement.expression.accept(Me)
+End Function
 
-    write_ "nt " & statement.expression.accept(Me)
+Private Function StmtVisitor_visitForEachStmt(statement As ForEachStmt) As Variant
+
+
+If (statement.hasDeclarator) Then
+    statement.objdeclarator.Stmt_accept Me
+End If
+
+If (statement.hasIteratorDeclarator) Then
+    statement.iteratordeclarator.Stmt_accept Me
+End If
+
+
+ write_ "for " & statement.iterator.m_lexeme & " = 0 to al(" & statement.iterable.accept(Me) & ") - 1"
+    indent
+    write_ "st " & statement.obj.m_lexeme & ", " & statement.iterable.accept(Me) & "(" & statement.iterator.m_lexeme & ")"
+    statement.body.accept Me
+    unindent
+    write_ "next " & statement.iterator.m_lexeme
 End Function
 
 Private Function StmtVisitor_visitFunctionStmt(statement As FunctionStmt) As Variant
@@ -281,7 +310,13 @@ Private Function StmtVisitor_visitReturnStmt(statement As ReturnStmt) As Variant
 End Function
 
 Private Function StmtVisitor_visitVarStmt(statement As VarStmt) As Variant
-    Dim s As String: s = "dim " & statement.name.m_lexeme & " as " & ctyp(statement.type_.m_lexeme)
+    Dim s As String:
+    If statement.type_.m_lexeme = "array" Then
+        s = "dim " & statement.name.m_lexeme & "() as " & ctyp(statement.type_.m_lexeme)
+    Else
+        s = "dim " & statement.name.m_lexeme & " as " & ctyp(statement.type_.m_lexeme)
+    End If
+   
     If statement.hasinitializer Then
         s = s & ": st " & statement.name.m_lexeme & ", " & statement.initializer.accept(Me)
     End If

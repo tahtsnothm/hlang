@@ -40,8 +40,12 @@ m_keywords("while") = WHILE_
     
 End Sub
 Public Function init(source As String, h_instance As H)
-    m_source = source
+    m_source = preprocess(source)
     Set m_h = h_instance
+End Function
+Private Function preprocess(source As String) As String
+    preprocess = Replace(source, "[", "(")
+    preprocess = Replace(preprocess, "]", ")")
 End Function
 
 Public Function scanTokens() As Variant ' lsittokens
@@ -74,6 +78,7 @@ Private Function scanToken()
         Case "}": addToken RIGHT_BRACE
         Case ",": addToken COMMA
         Case ".": addToken DOT
+        Case ":": addToken COLON
         Case "-":
             If match("=") Then
                 addToken MINUS_EQUAL

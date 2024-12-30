@@ -32,3 +32,6 @@ End Function
 
 Public Function visitReturnStmt(statement As ReturnStmt)
 End Function
+Public Function visitForEachStmt(statement As ForEachStmt)
+End Function
+

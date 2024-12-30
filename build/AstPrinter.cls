@@ -148,6 +148,10 @@ Private Function StmtVisitor_visitExprStmt(statement As ExprStmt) As Variant
     st StmtVisitor_visitExprStmt, statement.expression.accept(Me)
 End Function
 
+Private Function StmtVisitor_visitForEachStmt(statement As ForEachStmt) As Variant
+st StmtVisitor_visitForEachStmt, "(foreach " & statement.iterable.accept(Me) & statement.body.accept(Me) & ")"
+End Function
+
 Private Function StmtVisitor_visitFunctionStmt(statement As FunctionStmt) As Variant
 
     Dim i As Long

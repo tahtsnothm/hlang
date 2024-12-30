@@ -195,62 +195,136 @@ End Function
 Private Function forStatement_f()
     consume LEFT_PAREN, "Expected '(' after 'for'"
     
+    Dim isForEach As Boolean: isForEach = False
+    Dim iteratingobj As Token
+    Dim vardecin As VarStmt
+    Dim exdecin As ExprStmt
+    Dim varexprin As VariableExpr
+    Dim hasDeclarator As Boolean: hasDeclarator = False
+    
+    
     Dim initializer As Stmt
+    Dim iteratingobjtype As Token
+       Dim iterable As Expr
+    
+    If (check(IDENTIFIER) And (peeknext().m_type_ = COLON Or peeknextnext().m_type_ = COLON)) Then
+        isForEach = True
+        If (peeknext.m_type_ = IDENTIFIER) Then
+            st hasDeclarator, True
+            st iteratingobjtype, consume(IDENTIFIER, "Expected Type Name")
+            st iteratingobj, consume(IDENTIFIER, "Expected Variable Name")
+        Else
+            st iteratingobj, consume(IDENTIFIER, "Expected Variable Name")
+        End If
+        consume COLON, "Expected ':' in for clause"
+        
+        st iterable, expression_()
+        consume RIGHT_PAREN, "Expected ')' after 'for' clause"
+        GoTo skiphere:
+        
+    End If
     Dim hasinitializer As Boolean: hasinitializer = True
     If (match(SEMICOLON)) Then
         hasinitializer = False
     ElseIf isTypeName(peek()) Then
         st initializer, varDeclaration_f()
+
     Else
         st initializer, expressionStatement_f()
+
+        
     End If
     
+ 
     Dim condition As Expr
     Dim hascondition As Boolean: hascondition = False
+    Dim increment As Expr
+    Dim hasincrement As Boolean: hasincrement = False
+    
+    
     If (Not check(SEMICOLON)) Then
         st condition, expression_()
         hascondition = True
     End If
     consume SEMICOLON, "Expect ';' after loop condition"
     
-    Dim increment As Expr
-    Dim hasincrement As Boolean: hasincrement = False
+    
     If (Not check(RIGHT_PAREN)) Then
         st increment, expression_()
         hasincrement = True
     End If
     consume RIGHT_PAREN, "Expected ')' after 'for' clauses"
+skiphere:
     
+    
+    Dim iterator As Token
+    Dim iteratortype As Token
+    
+    Dim hasIteratorDeclarator As Boolean: hasIteratorDeclarator = False
+    
+
+    If (isForEach) Then
+        consume LEFT_PAREN, "Expected '(' for 'foreach' loop"
+        
+        
+        If (peeknext().m_type_ = IDENTIFIER) Then
+            'yes decl
+            st hasIteratorDeclarator, True
+            st iteratortype, consume(IDENTIFIER, "Expected Iterator type")
+            st iterator, consume(IDENTIFIER, "Expected iterator name")
+        Else
+            st iterator, consume(IDENTIFIER, "Expected iterator name")
+        End If
+        
+        consume RIGHT_PAREN, "Expected ')' after 'foreach' clause"
+    End If
+    
+
     
     Dim body As Stmt
     st body, statement_f()
     
-    If (hasincrement) Then
-        Dim temp As New BlockStmt
-        Dim tempinner As New ExprStmt
-        tempinner.Stmt_init increment
-        temp.Stmt_init Array(body, tempinner)
-        st body, temp
-    End If
+    Dim temp As New BlockStmt
+    Dim tempinner As New ExprStmt
     
-    If (Not hascondition) Then
-        Dim tmp As New LiteralExpr
-        tmp.Expr_init True
-        st condition, tmp
+    If (Not isForEach) Then
+        If (hasincrement) Then
+            
+            tempinner.Stmt_init increment
+            temp.Stmt_init Array(body, tempinner)
+            st body, temp
+        End If
         
-    End If
-    Dim tempwhile As New WhileStmt
-    tempwhile.Stmt_init condition, body
-    st body, tempwhile
-    
-    If (hasinitializer) Then
-        Dim temptemp As New BlockStmt
-        temptemp.Stmt_init Array(initializer, body)
-        st forStatement_f, temptemp
+        If (Not hascondition) Then
+            Dim tmp As New LiteralExpr
+            tmp.Expr_init True
+            st condition, tmp
+            
+        End If
+        Dim tempwhile As New WhileStmt
+        tempwhile.Stmt_init condition, body
+        st body, tempwhile
+        
+        If (hasinitializer) Then
+            Dim temptemp As New BlockStmt
+            temptemp.Stmt_init Array(initializer, body)
+            st forStatement_f, temptemp
+        Else
+            st forStatement_f, body
+        End If
     Else
-        st forStatement_f, body
+        ' is a foreach
+        Dim ttemp As New ForEachStmt
+        Dim iteratingobjdeclarator As New VarStmt
+        Dim iteratordeclarator As New VarStmt
+        'type, name
+        
+        iteratingobjdeclarator.Stmt_init iteratingobjtype, iteratingobj
+        iteratordeclarator.Stmt_init iteratortype, iterator
+        
+        ttemp.Stmt_init iteratingobjdeclarator, iteratingobj, iterable, iteratordeclarator, iterator, body, hasDeclarator, hasIteratorDeclarator
+        st forStatement_f, ttemp
     End If
-    
 End Function
 
 Private Function whileStatement_f()
@@ -649,6 +723,16 @@ If (current + 1 >= al(tokens)) Then
     Exit Function
 End If
 st peeknext, tokens(current + 1)
+End Function
+
+Private Function peeknextnext() As Token
+If (current + 2 >= al(tokens)) Then
+    Dim a As New Token
+    a.init EOF_, "", "", 999
+    Set peeknext = peek() 'guaranteed eof
+    Exit Function
+End If
+st peeknextnext, tokens(current + 2)
 End Function
 
 Private Function previous() As Token

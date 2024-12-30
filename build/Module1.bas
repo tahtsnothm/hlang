@@ -18,7 +18,7 @@ End Sub
 Sub hi()
 Dim hh As New H
 
-hh.runFile "C:\Users\aweso\OneDrive\Desktop\hlang\test.txt"
+hh.runFile ThisWorkbook.path & "\test.txt"
 End Sub
 
 
@@ -55,6 +55,8 @@ End Sub
 Public Sub import()
 ' DONT FUCKING TOUCH
 Exit Sub
+    Export
+
    Dim MyObj As Object, MySource As Object, file As Variant
    file = Dir(ThisWorkbook.path & "\src\")
    Dim mset As New Scripting.Dictionary

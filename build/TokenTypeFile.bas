@@ -5,6 +5,7 @@ Enum tokentype
     LEFT_BRACE
     RIGHT_BRACE
     COMMA
+    COLON
     DOT
     MINUS
     PLUS

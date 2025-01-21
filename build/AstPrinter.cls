@@ -100,6 +100,10 @@ Private Function ExprVisitor_visitCallExpr(expression As CallExpr) As Variant
     st ExprVisitor_visitCallExpr, "(call " & expression.callee.accept(Me) & "(" & arggs & "))"
 End Function
 
+Private Function ExprVisitor_visitDotExpr(expression As DotExpr) As Variant
+    ExprVisitor_visitDotExpr = expression.left.accept(Me) & "." & expression.right.accept(Me)
+End Function
+
 Private Function ExprVisitor_visitGroupingExpr(expression As GroupingExpr) As Variant
     ExprVisitor_visitGroupingExpr = parenthesize("group", expression.expression)
 End Function
@@ -142,6 +146,10 @@ End Function
 
 Private Function StmtVisitor_visitCodeStmt(statement As CodeStmt) As Variant
     st StmtVisitor_visitCodeStmt, statement.code
+End Function
+
+Private Function StmtVisitor_visitControlStmt(statement As ControlStmt) As Variant
+    st StmtVisitor_visitControlStmt, statement.keyword.m_lexeme
 End Function
 
 Private Function StmtVisitor_visitExprStmt(statement As ExprStmt) As Variant

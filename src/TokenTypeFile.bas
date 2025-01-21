@@ -5,6 +5,7 @@ Enum tokentype
     LEFT_BRACE
     RIGHT_BRACE
     COMMA
+    COLON
     DOT
     MINUS
     PLUS
@@ -13,9 +14,15 @@ Enum tokentype
     STAR
     AMPERSAND
     HASHTAG
+    MOD_
+    
+    PLUS_PLUS
+    MINUS_MINUS
     
     PLUS_EQUAL
     MINUS_EQUAL
+    SLASH_EQUAL
+    STAR_EQUAL
     BANG
     BANG_EQUAL
     EQUAL
@@ -29,6 +36,7 @@ Enum tokentype
     STRING_
     NUMBER_
     VARTYPE_
+    RAW_
     
     AND_
     CLASS_
@@ -46,6 +54,13 @@ Enum tokentype
     TRUE_
     VAR_
     WHILE_
+    NEW_
+    PUBLIC_
+    PRIVATE_
+    BREAK_
+    CONTINUE_
+    
+    BRANCHING_AND_
     
     EOF_
     

@@ -10,6 +10,7 @@ Attribute VB_Exposed = False
 Implements Expr
 Public assignee As Expr
 Public value As Expr
+Public addnew As Boolean
 
 Private Function Expr_copy() As Variant
 Dim temp As New AssignExpr
@@ -20,6 +21,7 @@ End Function
 Public Function Expr_init(ParamArray arr() As Variant)
     st assignee, arr(0)
     st value, arr(1)
+    st addnew, arr(2)
 End Function
 
 Public Function Expr_accept(visitor As ExprVisitor) As Variant

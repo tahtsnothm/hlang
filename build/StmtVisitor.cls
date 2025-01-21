@@ -34,4 +34,5 @@ Public Function visitReturnStmt(statement As ReturnStmt)
 End Function
 Public Function visitForEachStmt(statement As ForEachStmt)
 End Function
-
+Public Function visitControlStmt(statement As ControlStmt)
+End Function

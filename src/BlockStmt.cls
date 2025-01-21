@@ -11,7 +11,7 @@ Implements Stmt
 Public statements As Variant
 
 Public Function Stmt_init(ParamArray arr() As Variant)
-    statements = arr(0)
+    st statements, arr(0)
 End Function
 
 Public Function Stmt_accept(visitor As StmtVisitor) As Variant

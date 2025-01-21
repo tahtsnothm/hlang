@@ -1,4 +1,6 @@
 Attribute VB_Name = "Module1"
+
+
 Sub tt()
 Dim fso As New FileSystemObject
 Dim ts As TextStream
@@ -15,25 +17,30 @@ Next i
 ts.Close
 End Sub
 
-Sub HI()
+
+Sub hi()
 Dim hh As New H
 
-hh.runFile "C:\Users\aweso\OneDrive\Desktop\hlang\test.txt"
+hh.runFile ThisWorkbook.Path & "\test.txt"
+
+End Sub
+
+Sub hcc(filename As String)
+Dim hh As New H
+
+hh.runFile ThisWorkbook.Path & "\" & filename
 End Sub
 
 
 Public Sub Export()
 
-  Dim wbPath As String
+  Dim wbPath As String: wbPath = ThisWorkbook.Path & "\build"
   Dim vbComp As Object
-  Dim exportPath As String
-  wbPath = ThisWorkbook.path & "\build"
 
-  For Each vbComp In ActiveWorkbook.VBProject.VBComponents
+  For Each vbComp In ThisWorkbook.VBProject.VBComponents
     If (vbComp.name = "ThisWorkbook") Then GoTo endloop
-    exportPath = wbPath & "\" & vbComp.name '& format$(Now, "_yyyymmdd_hhnnss")
+    Dim exportPath As String: exportPath = wbPath & "\" & vbComp.name '& format$(Now, "_yyyymmdd_hhnnss")
     
-
     Select Case vbComp.Type
         Case vbext_ct_StdModule ' Standard Module
             exportPath = exportPath & ".bas"
@@ -48,8 +55,41 @@ Public Sub Export()
 
     On Error Resume Next
     vbComp.Export exportPath
+    pt "Export:", vbComp.name
     On Error GoTo 0
 endloop:
   Next
 
 End Sub
+
+Public Sub import()
+' DONT FUCKING TOUCH
+Exit Sub
+    Export
+
+   Dim MyObj As Object, MySource As Object, file As Variant
+   file = Dir(ThisWorkbook.Path & "\src\")
+   Dim mset As New Scripting.Dictionary
+   Dim vbComp As Object
+    For Each vbComp In ThisWorkbook.VBProject.VBComponents
+        Dim s As String: s = vbComp.name
+        Select Case vbComp.Type
+        Case vbext_ct_StdModule ' Standard Module
+            s = s & ".bas"
+        'Case 2 ' UserForm
+           ' exportPath = exportPath & ".frm"
+        Case vbext_ct_ClassModule ' Class Module
+            s = s & ".cls"
+    End Select
+        mset.Add s, vbComp
+    Next vbComp
+   While (file <> "")
+        pt "Import:", file
+        If (mset.Exists(file)) Then
+            ThisWorkbook.VBProject.VBComponents.Remove mset(file)
+        End If
+        ThisWorkbook.VBProject.VBComponents.import ThisWorkbook.Path & "\src\" & file
+        file = Dir
+  Wend
+End Sub
+

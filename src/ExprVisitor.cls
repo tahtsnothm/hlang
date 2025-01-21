@@ -22,3 +22,7 @@ Public Function visitVariableExpr(expression As VariableExpr)
 End Function
 Public Function visitLogicalExpr(expression As LogicalExpr)
 End Function
+Public Function visitCallExpr(expression As CallExpr)
+End Function
+Public Function visitDotExpr(expression As DotExpr)
+End Function

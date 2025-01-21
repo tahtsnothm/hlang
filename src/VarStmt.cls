@@ -8,21 +8,24 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Implements Stmt
+Public vis As String
 Public type_ As Token
 Public name As Token
 Public initializer As Expr
+Public addnew As Boolean
 Public hasinitializer As Boolean
 
 Public Function Stmt_init(ParamArray arr() As Variant)
-    st type_, arr(0)
-    st name, arr(1)
-    If (al(arr) = 2) Then
+    st vis, arr(0)
+    st type_, arr(1)
+    st name, arr(2)
+    If (al(arr) = 3) Then
         hasinitializer = False
     Else
-        st initializer, arr(2)
+        st initializer, arr(4)
+        st addnew, arr(3)
         hasinitializer = True
     End If
-    
 End Function
 
 Public Function Stmt_accept(visitor As StmtVisitor) As Variant

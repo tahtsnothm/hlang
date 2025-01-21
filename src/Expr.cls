@@ -12,3 +12,6 @@ End Function
 
 Public Function accept(visitor As ExprVisitor) As Variant
 End Function
+
+Public Function copy()
+End Function

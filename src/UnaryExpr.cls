@@ -20,3 +20,10 @@ Public Function Expr_accept(visitor As ExprVisitor) As Variant
     st Expr_accept, visitor.visitUnaryExpr(Me)
 End Function
 
+Private Function Expr_copy() As Variant
+Dim temp As New UnaryExpr
+
+temp.Expr_init operator, right.copy()
+st Expr_copy, temp
+End Function
+

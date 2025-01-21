@@ -22,3 +22,8 @@ Public Function Expr_accept(visitor As ExprVisitor) As Variant
     st Expr_accept, visitor.visitBinaryExpr(Me)
 End Function
 
+Private Function Expr_copy() As Variant
+Dim temp As New BinaryExpr
+temp.Expr_init left.copy(), operator, right.copy()
+st Expr_copy, temp
+End Function

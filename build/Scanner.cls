@@ -36,8 +36,12 @@ m_keywords("this") = THIS_
 m_keywords("true") = TRUE_
 m_keywords("var") = VAR_
 m_keywords("while") = WHILE_
-
-    
+m_keywords("new") = NEW_
+m_keywords("this") = THIS_
+m_keywords("public") = PUBLIC_
+m_keywords("private") = PRIVATE_
+m_keywords("break") = BREAK_
+m_keywords("continue") = CONTINUE_
 End Sub
 Public Function init(source As String, h_instance As H)
     m_source = preprocess(source)
@@ -79,15 +83,20 @@ Private Function scanToken()
         Case ",": addToken COMMA
         Case ".": addToken DOT
         Case ":": addToken COLON
+        Case "%": addToken MOD_
         Case "-":
             If match("=") Then
                 addToken MINUS_EQUAL
+            ElseIf (match("-")) Then
+                addToken MINUS_MINUS
             Else
                 addToken MINUS
             End If
         Case "+":
             If match("=") Then
                 addToken PLUS_EQUAL
+            ElseIf (match("+")) Then
+                addToken PLUS_PLUS
             Else
                 addToken PLUS
             End If

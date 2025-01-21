@@ -25,12 +25,92 @@ Public Function parse()
     st parse, statements
 End Function
 Private Function declaration_f()
-    If (isTypeName(peek())) Then
-        st declaration_f, varDeclaration_f()
+    
+    Dim vis As String: vis = ""
+    If (match(PUBLIC_)) Then
+        vis = "public"
+    ElseIf (match(PRIVATE_)) Then
+        vis = "private"
+    End If
+    
+    
+    If ((peek().m_type_ = IDENTIFIER) And (peeknext().m_type_ = IDENTIFIER)) Then
+        st declaration_f, varDeclaration_f(vis)
+        Exit Function
+    ElseIf (match(FUNC_)) Then
+            st declaration_f, function_("function", vis)
+            Exit Function
+    ElseIf (match(CLASS_)) Then
+        st declaration_f, classDeclaration_f()
         Exit Function
     End If
     
     st declaration_f, statement_f()
+    
+End Function
+Private Function classDeclaration_f()
+ Dim name As Token
+st name, consume(IDENTIFIER, "Expect class name.")
+Dim superc As Token
+
+Dim hassuperclass As Boolean: hassuperclass = False
+If (match(LESS)) Then
+    hassuperclass = True
+    
+    st superc, consume(IDENTIFIER, "Expected Parent Class Name")
+End If
+
+consume LEFT_BRACE, "Expect '{' before class body"
+Dim methods() As Variant
+
+While (Not check(RIGHT_BRACE) And Not isAtEnd())
+    arad methods, function_("method")
+Wend
+
+consume RIGHT_BRACE, "Expect '}' after class body."
+
+Dim temp As New ClassStmt
+temp.Stmt_init name, methods, superc, hassuperclass
+
+st classDeclaration_f, temp
+End Function
+
+Private Function function_(kind As String, Optional vis As String = "")
+
+    Dim returntype As Token
+    st returntype, consume(IDENTIFIER, "Expected type before function name")
+    Dim name As Token
+    st name, consume(IDENTIFIER, "Expected " & kind & " name.")
+    
+    consume LEFT_PAREN, "Expected '(' after " & kind & " name."
+    Dim parameters() As Variant
+    Dim parammethods() As Variant
+    Dim parametertypes() As Variant
+    If (Not check(RIGHT_PAREN)) Then
+        Do
+            If (al(parameters) > 254) Then
+                err peek(), "Can't have more than 255 parameters"
+            End If
+            arad parametertypes, consume(IDENTIFIER, "Expected parameter type.")
+            If (match(AMPERSAND)) Then
+                arad parammethods, True
+            Else
+                arad parammethods, False
+            End If
+            arad parameters, consume(IDENTIFIER, "Expected parameter name.")
+        Loop While (match(COMMA))
+        
+        
+    End If
+    consume RIGHT_PAREN, "Expected ')' after parameters"
+    
+    consume LEFT_BRACE, "Expect '{' before " & kind & " body"
+    Dim body As Variant
+    st body, block_f()
+    Dim temp As New FunctionStmt
+    temp.Stmt_init name, returntype, parameters, parametertypes, parammethods, body, vis
+    st function_, temp
+    
     
 End Function
 Private Function isTypeName(tk As Token)
@@ -53,7 +133,7 @@ Private Function isTypeName(tk As Token)
     End If
     
 End Function
-Private Function varDeclaration_f()
+Private Function varDeclaration_f(Optional vis As String = "")
     Dim varType As Token
     st varType, consume(IDENTIFIER, "Expected type before variable name")
     Dim varName As Token
@@ -64,10 +144,13 @@ Private Function varDeclaration_f()
     
     Dim temp As New VarStmt
     If (match(EQUAL)) Then
+        Dim addnew As Boolean: addnew = False
+        If (match(NEW_)) Then addnew = True
+        
         st initializer, expression_()
-        temp.Stmt_init varType, varName, initializer
+        temp.Stmt_init vis, varType, varName, addnew, initializer
     Else
-        temp.Stmt_init varType, varName 'do we need a null node hmm (no thats in the codeGen, for the init function to handle the boolean)
+        temp.Stmt_init vis, varType, varName 'do we need a null node hmm (no thats in the codeGen, for the init function to handle the boolean)
     End If
     consume SEMICOLON, "Expect ';' after variable declaration"
     st varDeclaration_f, temp
@@ -82,7 +165,10 @@ Private Function statement_f()
         Exit Function
     End If
     If (match(LEFT_BRACE)) Then
-        st statement_f, block_f()
+    
+        Dim blocknode As New BlockStmt
+        blocknode.Stmt_init block_f()
+        st statement_f, blocknode
         Exit Function
     End If
 
@@ -95,68 +181,185 @@ Private Function statement_f()
         st statement_f, forStatement_f()
         Exit Function
     End If
+    If (match(RETURN_)) Then
+        st statement_f, returnStatement_f()
+        Exit Function
+    End If
+    If (match(RAW_)) Then
+        st statement_f, codeStatement_f()
+        Exit Function
+    End If
+    If (match(CONTINUE_, BREAK_)) Then
+        st statement_f, controlStatement_f()
+        Exit Function
+    End If
     st statement_f, expressionStatement_f()
 End Function
 
+Private Function controlStatement_f()
+Dim keyword As Token: st keyword, previous()
+Dim temp As New ControlStmt
+temp.Stmt_init keyword
+consume SEMICOLON, "Expected ';' after return"
+st controlStatement_f, temp
+End Function
+
+Private Function returnStatement_f()
+Dim keyword As Token: st keyword, previous()
+Dim value As Expr
+Dim temp As New ReturnStmt
+If (Not check(SEMICOLON)) Then
+    st value, expression_()
+    temp.Stmt_init keyword, value, True
+Else
+    Dim faketemp As New LiteralExpr
+    faketemp.Expr_init "null"
+    temp.Stmt_init keyword, faketemp, False
+End If
+consume SEMICOLON, "Expected ';' after return"
+st returnStatement_f, temp
+End Function
+Private Function codeStatement_f()
+Dim codeblock As Token
+st codeblock, previous()
+
+Dim temp As New CodeStmt
+temp.Stmt_init codeblock.m_literal
+st codeStatement_f, temp
+End Function
 Private Function forStatement_f()
     consume LEFT_PAREN, "Expected '(' after 'for'"
     
+    Dim isForEach As Boolean: isForEach = False
+    Dim iteratingobj As Token
+    Dim vardecin As VarStmt
+    Dim exdecin As ExprStmt
+    Dim varexprin As VariableExpr
+    Dim hasDeclarator As Boolean: hasDeclarator = False
+    
+    
     Dim initializer As Stmt
+    Dim iteratingobjtype As Token
+       Dim iterable As Expr
+    
+    If (check(IDENTIFIER) And (peeknext().m_type_ = COLON Or peeknextnext().m_type_ = COLON)) Then
+        isForEach = True
+        If (peeknext.m_type_ = IDENTIFIER) Then
+            st hasDeclarator, True
+            st iteratingobjtype, consume(IDENTIFIER, "Expected Type Name")
+            st iteratingobj, consume(IDENTIFIER, "Expected Variable Name")
+        Else
+            st iteratingobj, consume(IDENTIFIER, "Expected Variable Name")
+        End If
+        consume COLON, "Expected ':' in for clause"
+        
+        st iterable, expression_()
+        consume RIGHT_PAREN, "Expected ')' after 'for' clause"
+        GoTo skiphere:
+        
+    End If
     Dim hasinitializer As Boolean: hasinitializer = True
     If (match(SEMICOLON)) Then
         hasinitializer = False
     ElseIf isTypeName(peek()) Then
         st initializer, varDeclaration_f()
+
     Else
         st initializer, expressionStatement_f()
+
+        
     End If
     
+ 
     Dim condition As Expr
     Dim hascondition As Boolean: hascondition = False
+    Dim increment As Expr
+    Dim hasincrement As Boolean: hasincrement = False
+    
+    
     If (Not check(SEMICOLON)) Then
         st condition, expression_()
         hascondition = True
     End If
     consume SEMICOLON, "Expect ';' after loop condition"
     
-    Dim increment As Expr
-    Dim hasincrement As Boolean: hasincrement = False
+    
     If (Not check(RIGHT_PAREN)) Then
         st increment, expression_()
         hasincrement = True
     End If
     consume RIGHT_PAREN, "Expected ')' after 'for' clauses"
+skiphere:
     
+    
+    Dim iterator As Token
+    Dim iteratortype As Token
+    
+    Dim hasIteratorDeclarator As Boolean: hasIteratorDeclarator = False
+    
+
+    If (isForEach) Then
+        consume LEFT_PAREN, "Expected '(' for 'foreach' loop"
+        
+        
+        If (peeknext().m_type_ = IDENTIFIER) Then
+            'yes decl
+            st hasIteratorDeclarator, True
+            st iteratortype, consume(IDENTIFIER, "Expected Iterator type")
+            st iterator, consume(IDENTIFIER, "Expected iterator name")
+        Else
+            st iterator, consume(IDENTIFIER, "Expected iterator name")
+        End If
+        
+        consume RIGHT_PAREN, "Expected ')' after 'foreach' clause"
+    End If
+    
+
     
     Dim body As Stmt
     st body, statement_f()
     
-    If (hasincrement) Then
-        Dim temp As New BlockStmt
-        Dim tempinner As New ExprStmt
-        tempinner.Stmt_init increment
-        temp.Stmt_init Array(body, tempinner)
-        st body, temp
-    End If
+    Dim temp As New BlockStmt
+    Dim tempinner As New ExprStmt
     
-    If (Not hascondition) Then
-        Dim tmp As New LiteralExpr
-        tmp.Expr_init True
-        st condition, tmp
+    If (Not isForEach) Then
+        If (hasincrement) Then
+            
+            tempinner.Stmt_init increment
+            temp.Stmt_init Array(body, tempinner)
+            st body, temp
+        End If
         
-    End If
-    Dim tempwhile As New WhileStmt
-    tempwhile.Stmt_init condition, body
-    st body, tempwhile
-    
-    If (hasinitializer) Then
-        Dim temptemp As New BlockStmt
-        temptemp.Stmt_init Array(initializer, body)
-        st forStatement_f, temptemp
+        If (Not hascondition) Then
+            Dim tmp As New LiteralExpr
+            tmp.Expr_init True
+            st condition, tmp
+            
+        End If
+        Dim tempwhile As New WhileStmt
+        tempwhile.Stmt_init condition, body
+        st body, tempwhile
+        
+        If (hasinitializer) Then
+            Dim temptemp As New BlockStmt
+            temptemp.Stmt_init Array(initializer, body)
+            st forStatement_f, temptemp
+        Else
+            st forStatement_f, body
+        End If
     Else
-        st forStatement_f, body
+        ' is a foreach
+        Dim ttemp As New ForEachStmt
+        Dim iteratingobjdeclarator As New VarStmt
+        Dim iteratordeclarator As New VarStmt
+        'type, name
+        
+        iteratingobjdeclarator.Stmt_init "", iteratingobjtype, iteratingobj
+        iteratordeclarator.Stmt_init "", iteratortype, iterator
+        
+        ttemp.Stmt_init iteratingobjdeclarator, iteratingobj, iterable, iteratordeclarator, iterator, body, hasDeclarator, hasIteratorDeclarator
+        st forStatement_f, ttemp
     End If
-    
 End Function
 
 Private Function whileStatement_f()
@@ -211,7 +414,7 @@ Private Function expressionStatement_f()
     consume SEMICOLON, "Expect ';' after value"
     Dim temp As New ExprStmt
     temp.Stmt_init expr_
-    st printStatement_, temp
+    st expressionStatement_f, temp
 End Function
 
 Private Function block_f()
@@ -222,10 +425,8 @@ Private Function block_f()
         arad statements, temp
     Wend
     consume RIGHT_BRACE, "Expect '}' after block"
+    st block_f, statements
     
-    Dim blocknode As New BlockStmt
-    blocknode.Stmt_init statements
-    st block_f, blocknode
 End Function
 
 Private Function expression_() As Expr
@@ -237,28 +438,81 @@ End Function
 
 Private Function assignment_()
     Dim expr_ As New Expr
-    st expr_, or_f()
+    st expr_, br_and_f()
+    Dim eqs As New Token
+    Dim value As Expr
+    Dim temp As New AssignExpr
+    Dim tempbinary As New BinaryExpr
+    Dim ops As New Token
     
+    Dim tempunary As New UnaryExpr
+    
+    Dim addnew As Boolean: addnew = False
     If match(EQUAL) Then
-        Dim eqs As New Token
+        If (match(NEW_)) Then addnew = True
         st eqs, previous()
-        
-        Dim value As New Expr
         st value, assignment_()
         If (TypeName(expr_) = "VariableExpr") Then
-            Dim varexprcast As VariableExpr
-            st varexprcast, expr_
-            Dim name As New Token
-            st name, varexprcast.name
-            
-            Dim temp As New AssignExpr
-            temp.Expr_init name, value
+            temp.Expr_init expr_, value, addnew
+            st expr_, temp
+        ElseIf (TypeName(expr_) = "CallExpr") Then
+            temp.Expr_init expr_, value, addnew
+            st expr_, temp
         End If
         'raise error here
-
+    ElseIf match(PLUS_EQUAL) Then
+        ops.init PLUS, "+", Null, previous.m_line
+        st value, assignment_()
+        tempbinary.Expr_init expr_.copy(), ops, value 'minor bug if expr_ (LHS of assignment) is not pure
+        temp.Expr_init expr_, tempbinary, addnew
+        st expr_, temp
+    ElseIf match(MINUS_EQUAL) Then
+        ops.init MINUS, "-", Null, previous.m_line
+        st value, assignment_()
+        tempbinary.Expr_init expr_.copy(), ops, value 'minor bug if expr_ (LHS of assignment) is not pure
+        temp.Expr_init expr_, tempbinary, addnew
+        st expr_, temp
+    ElseIf match(STAR_EQUAL) Then
+        ops.init STAR, "*", Null, previous.m_line
+        st value, assignment_()
+        tempbinary.Expr_init expr_.copy(), ops, value 'minor bug if expr_ (LHS of assignment) is not pure
+        temp.Expr_init expr_, tempbinary, addnew
+        st expr_, temp
+    ElseIf match(SLASH_EQUAL) Then
+        ops.init SLASH, "/", Null, previous.m_line
+        st value, assignment_()
+        tempbinary.Expr_init expr_.copy(), ops, value 'minor bug if expr_ (LHS of assignment) is not pure
+        temp.Expr_init expr_, tempbinary, addnew
+        st expr_, temp
+    ElseIf match(PLUS_PLUS) Then
+        ops.init PLUS, "+", Null, previous.m_line
+        tempunary.Expr_init ops, expr_.copy()
+        st expr_, tempunary
+    ElseIf match(MINUS_MINUS) Then
+        ops.init MINUS, "-", Null, previous.m_line
+        tempunary.Expr_init ops, expr_.copy()
+        st expr_, tempunary
     End If
     
     st assignment_, expr_
+End Function
+
+Private Function br_and_f()
+'branching and
+    Dim expr_ As New Expr
+    st expr_, or_f()
+    While (match(BRANCHING_AND_))
+        Dim operator As New Token
+        st operator, previous()
+        
+        Dim right As New Expr
+        st right, or_f()
+        
+        Dim temp As New LogicalExpr
+        temp.Expr_init expr_.copy(), operator, right
+        st expr_, temp
+    Wend
+    st br_and_f, expr_
 End Function
 
 Private Function or_f()
@@ -270,12 +524,12 @@ Private Function or_f()
         st operator, previous()
         
         Dim right As New Expr
-        st right, equality_()
+        st right, and_f()
         
-        Dim temp As New LogicalExpr
+        Dim temp As New BinaryExpr
         Dim prevExpr As New Expr
         st prevExpr, expr_
-        temp.Expr_init prevExpr, operator, right
+        temp.Expr_init prevExpr.copy(), operator, right
         st expr_, temp
     Wend
     st or_f, expr_
@@ -292,10 +546,10 @@ Private Function and_f()
         Dim right As New Expr
         st right, equality_()
         
-        Dim temp As New LogicalExpr
+        Dim temp As New BinaryExpr
         Dim prevExpr As New Expr
         st prevExpr, expr_
-        temp.Expr_init prevExpr, operator, right
+        temp.Expr_init prevExpr.copy(), operator, right
         st expr_, temp
     Wend
     
@@ -312,7 +566,7 @@ Private Function equality_()
         Dim right As Expr
         Set right = comparison_()
         Dim temp As New BinaryExpr
-        temp.Expr_init expr_, operator, right
+        temp.Expr_init expr_.copy(), operator, right
         Set expr_ = temp
     Wend
     
@@ -329,7 +583,7 @@ Private Function comparison_()
         Dim right As Expr
         Set right = term_()
         Dim temp As New BinaryExpr
-        temp.Expr_init expr_, operator, right
+        temp.Expr_init expr_.copy(), operator, right
         Set expr_ = temp
     Wend
     
@@ -339,14 +593,25 @@ End Function
 Private Function term_()
     Dim expr_ As Expr
     Set expr_ = factor_()
-    While (match(MINUS, PLUS))
+    While (match(MINUS, PLUS, AMPERSAND, MOD_))
         Dim operator As Token
         Set operator = previous()
+        Dim left As Expr
+        st left, expr_.copy()
+        
         Dim right As Expr
-        Set right = factor_()
+        st right, factor_()
+        'pt expr_.accept(New AstPrinter), right.accept(New AstPrinter)
+        
+        
         Dim temp As New BinaryExpr
-        temp.Expr_init expr_, operator, right
-        Set expr_ = temp
+        'pt TypeName(left), TypeName(operator), TypeName(right)
+        temp.Expr_init left, operator, right
+        
+        Dim tempcast As Expr
+        st tempcast, temp
+        'pt tempcast.accept(New AstPrinter)
+        st expr_, temp
     Wend
     
     Set term_ = expr_
@@ -358,10 +623,12 @@ Private Function factor_()
     While (match(SLASH, STAR))
         Dim operator As Token
         Set operator = previous()
-        Dim right As Expr
+        Dim right As New Expr
         Set right = unary_()
         Dim temp As New BinaryExpr
-        temp.Expr_init expr_, operator, right
+        Dim left As New Expr
+        st left, expr_.copy()
+        temp.Expr_init left, operator, right
         Set expr_ = temp
     Wend
     
@@ -378,10 +645,61 @@ Private Function unary_()
         temp.Expr_init operator, right
         Set expr_ = temp
     Else
-        Set expr_ = primary_()
+        Set expr_ = call_()
     End If
     
     Set unary_ = expr_
+End Function
+
+Private Function call_()
+Dim expr_ As Expr
+st expr_, primary_()
+
+Dim exitwhile As Boolean: exitwhile = False
+While Not exitwhile
+    Dim temp As Expr
+    If (match(LEFT_PAREN)) Then
+        
+        st temp, finishCall(expr_.copy())
+        st expr_, temp
+    ElseIf (match(DOT)) Then
+        st temp, finishDot(expr_.copy())
+        st expr_, temp
+    Else
+        exitwhile = True
+    End If
+Wend
+st call_, expr_
+End Function
+Private Function finishCall(callee As Expr)
+    Dim arguments() As Variant
+    If (Not check(RIGHT_PAREN)) Then
+        Do
+            If (al(arguments) > 254) Then
+                err peek(), "Can't have more than 255 arguments"
+            End If
+            arad arguments, expression_()
+        Loop While (match(COMMA))
+    End If
+    
+    Dim paren As Token
+    st paren, consume(RIGHT_PAREN, "Expect ')' after arguments")
+    
+    
+    Dim temp As New CallExpr
+    temp.Expr_init callee, paren, arguments
+    
+    st finishCall, temp
+    
+End Function
+
+Private Function finishDot(accessee As Expr)
+    Dim done As Boolean: done = False
+    Dim rhs As Expr
+    st rhs, call_()
+    Dim temp As New DotExpr
+    temp.Expr_init accessee, rhs
+    st finishDot, temp
 End Function
 Private Function primary_()
 Dim temp As New LiteralExpr
@@ -393,6 +711,10 @@ If (match(FALSE_)) Then
 ElseIf (match(TRUE_)) Then
 
     temp.Expr_init True
+    Set primary_ = temp
+    Exit Function
+ElseIf (match(NULL_)) Then
+    temp.Expr_init "null"
     Set primary_ = temp
     Exit Function
 ElseIf (match(NUMBER_, STRING_)) Then
@@ -453,6 +775,24 @@ End Function
 
 Private Function peek() As Token
     Set peek = tokens(current)
+End Function
+
+Private Function peeknext() As Token
+If (current + 1 >= al(tokens)) Then
+    Set peeknext = peek() 'guaranteed eof
+    Exit Function
+End If
+st peeknext, tokens(current + 1)
+End Function
+
+Private Function peeknextnext() As Token
+If (current + 2 >= al(tokens)) Then
+    Dim a As New Token
+    a.init EOF_, "", "", 999
+    Set peeknext = peek() 'guaranteed eof
+    Exit Function
+End If
+st peeknextnext, tokens(current + 2)
 End Function
 
 Private Function previous() As Token

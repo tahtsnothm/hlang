@@ -139,6 +139,11 @@ If arrlength = 0 Then
     Exit Function
 End If
 
+If arrlength = 1 Then
+    arr = Array()
+    Exit Function
+End If
+
 If arrlength - 1 < index Then
     Exit Function
 End If

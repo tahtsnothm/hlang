@@ -29,12 +29,13 @@ Private Function parenthesize(ParamArray arr() As Variant) As String
     s = ""
     s = s + "("
     s = s + arr(0)
-    Dim expression As Expr
+    
     For i = 1 To al(arr) - 1
+        Dim expression As Expr
         st expression, arr(i)
+        'pt (expression.accept(New AstPrinter))
         s = s + " "
         s = s + CStr(expression.accept(Me))
-
     Next i
     s = s + ")"
     parenthesize = s
@@ -69,7 +70,7 @@ Private Function parenthesizelots(ParamArray arr() As Variant) As String
         s = s + CStr(expression.accept(Me))
         s = s + " "
     Next i
-    s = left(s, Len(s) - 1)
+    If (al(arr(1)) > 0) Then s = left(s, Len(s) - 1)
     s = s + ")"
     parenthesizelots = s
 End Function
@@ -77,11 +78,30 @@ End Function
 
 
 Private Function ExprVisitor_visitAssignExpr(expression As AssignExpr) As Variant
-    st ExprVisitor_visitAssignExpr, parenthesize("assign", expression.name, expression.value)
+    st ExprVisitor_visitAssignExpr, "(assign " & expression.assignee.accept(Me) & " " & expression.value.accept(Me) & ")"
 End Function
 
 Private Function ExprVisitor_visitBinaryExpr(expression As BinaryExpr) As Variant
     ExprVisitor_visitBinaryExpr = parenthesize(expression.operator.m_lexeme, expression.left, expression.right)
+End Function
+
+
+
+Private Function ExprVisitor_visitCallExpr(expression As CallExpr) As Variant
+    Dim i As Long
+    Dim arggs As String: arggs = ""
+    For i = 0 To al(expression.arguments) - 1
+        Dim innerexpr As Expr
+        st innerexpr, expression.arguments(i)
+        arggs = arggs & innerexpr.accept(Me) & ","
+    Next i
+    If (al(expression.arguments) > 0) Then arggs = left(arggs, Len(arggs) - 1)
+    
+    st ExprVisitor_visitCallExpr, "(call " & expression.callee.accept(Me) & "(" & arggs & "))"
+End Function
+
+Private Function ExprVisitor_visitDotExpr(expression As DotExpr) As Variant
+    ExprVisitor_visitDotExpr = expression.left.accept(Me) & "." & expression.right.accept(Me)
 End Function
 
 Private Function ExprVisitor_visitGroupingExpr(expression As GroupingExpr) As Variant
@@ -120,8 +140,43 @@ Private Function StmtVisitor_visitBlockStmt(statement As BlockStmt) As Variant
     st StmtVisitor_visitBlockStmt, parenthesizelots("block", statement.statements)
 End Function
 
+Private Function StmtVisitor_visitClassStmt(statement As ClassStmt) As Variant
+    st StmtVisitor_visitClassStmt, "class"
+End Function
+
+Private Function StmtVisitor_visitCodeStmt(statement As CodeStmt) As Variant
+    st StmtVisitor_visitCodeStmt, statement.code
+End Function
+
+Private Function StmtVisitor_visitControlStmt(statement As ControlStmt) As Variant
+    st StmtVisitor_visitControlStmt, statement.keyword.m_lexeme
+End Function
+
 Private Function StmtVisitor_visitExprStmt(statement As ExprStmt) As Variant
     st StmtVisitor_visitExprStmt, statement.expression.accept(Me)
+End Function
+
+Private Function StmtVisitor_visitForEachStmt(statement As ForEachStmt) As Variant
+st StmtVisitor_visitForEachStmt, "(foreach " & statement.iterable.accept(Me) & statement.body.accept(Me) & ")"
+End Function
+
+Private Function StmtVisitor_visitFunctionStmt(statement As FunctionStmt) As Variant
+
+    Dim i As Long
+    Dim arggs As String: arggs = ""
+    For i = 0 To al(statement.params) - 1
+        Dim innerexpr As Token
+        Dim innertoken As Token
+        st innertoken, statement.paramtypes(i)
+        st innerexpr, statement.params(i)
+        arggs = arggs & innertoken.m_lexeme & " " & innerexpr.m_lexeme & ","
+    Next i
+    If al(statement.params) > 0 Then arggs = left(arggs, Len(arggs) - 1)
+    
+    Dim fakeblock As New BlockStmt
+    
+    fakeblock.Stmt_init statement.body
+    st StmtVisitor_visitFunctionStmt, "(function " & statement.returntype.m_lexeme & " " & statement.name.m_lexeme & "(" & arggs & ")" & fakeblock.Stmt_accept(Me)
 End Function
 
 Private Function StmtVisitor_visitIfStmt(statement As IfStmt) As Variant
@@ -132,13 +187,17 @@ Private Function StmtVisitor_visitIfStmt(statement As IfStmt) As Variant
         Dim bs As String
         cs = CStr(statement.condition.accept(Me))
         bs = CStr(statement.thenBranch.accept(Me))
-        st StmtVisitor_visitIfStmt, "(if " & CStr(statement.condition.accept(Me)) & " " & CStr(statement.thenBranch.accept(Me)) & ")"
+        st StmtVisitor_visitIfStmt, "(if " & cs & " " & bs & ")"
     End If
 
 End Function
 
 Private Function StmtVisitor_visitPrintStmt(statement As PrintStmt) As Variant
     st StmtVisitor_visitPrintStmt, parenthesize("print", statement.expression)
+End Function
+
+Private Function StmtVisitor_visitReturnStmt(statement As ReturnStmt) As Variant
+    st StmtVisitor_visitReturnStmt, "return"
 End Function
 
 Private Function StmtVisitor_visitVarStmt(statement As VarStmt) As Variant

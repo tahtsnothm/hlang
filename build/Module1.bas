@@ -1,4 +1,6 @@
 Attribute VB_Name = "Module1"
+
+
 Sub tt()
 Dim fso As New FileSystemObject
 Dim ts As TextStream
@@ -15,16 +17,24 @@ Next i
 ts.Close
 End Sub
 
+
 Sub hi()
 Dim hh As New H
 
-hh.runFile ThisWorkbook.path & "\test.txt"
+hh.runFile ThisWorkbook.Path & "\test.txt"
+
+End Sub
+
+Sub hcc(filename As String)
+Dim hh As New H
+
+hh.runFile ThisWorkbook.Path & "\" & filename
 End Sub
 
 
 Public Sub Export()
 
-  Dim wbPath As String: wbPath = ThisWorkbook.path & "\build"
+  Dim wbPath As String: wbPath = ThisWorkbook.Path & "\build"
   Dim vbComp As Object
 
   For Each vbComp In ThisWorkbook.VBProject.VBComponents
@@ -58,7 +68,7 @@ Exit Sub
     Export
 
    Dim MyObj As Object, MySource As Object, file As Variant
-   file = Dir(ThisWorkbook.path & "\src\")
+   file = Dir(ThisWorkbook.Path & "\src\")
    Dim mset As New Scripting.Dictionary
    Dim vbComp As Object
     For Each vbComp In ThisWorkbook.VBProject.VBComponents
@@ -78,7 +88,8 @@ Exit Sub
         If (mset.Exists(file)) Then
             ThisWorkbook.VBProject.VBComponents.Remove mset(file)
         End If
-        ThisWorkbook.VBProject.VBComponents.import ThisWorkbook.path & "\src\" & file
+        ThisWorkbook.VBProject.VBComponents.import ThisWorkbook.Path & "\src\" & file
         file = Dir
   Wend
 End Sub
+

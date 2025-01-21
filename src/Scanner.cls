@@ -36,12 +36,20 @@ m_keywords("this") = THIS_
 m_keywords("true") = TRUE_
 m_keywords("var") = VAR_
 m_keywords("while") = WHILE_
-
-    
+m_keywords("new") = NEW_
+m_keywords("this") = THIS_
+m_keywords("public") = PUBLIC_
+m_keywords("private") = PRIVATE_
+m_keywords("break") = BREAK_
+m_keywords("continue") = CONTINUE_
 End Sub
 Public Function init(source As String, h_instance As H)
-    m_source = source
+    m_source = preprocess(source)
     Set m_h = h_instance
+End Function
+Private Function preprocess(source As String) As String
+    preprocess = Replace(source, "[", "(")
+    preprocess = Replace(preprocess, "]", ")")
 End Function
 
 Public Function scanTokens() As Variant ' lsittokens
@@ -74,22 +82,38 @@ Private Function scanToken()
         Case "}": addToken RIGHT_BRACE
         Case ",": addToken COMMA
         Case ".": addToken DOT
+        Case ":": addToken COLON
+        Case "%": addToken MOD_
         Case "-":
             If match("=") Then
                 addToken MINUS_EQUAL
+            ElseIf (match("-")) Then
+                addToken MINUS_MINUS
             Else
                 addToken MINUS
             End If
         Case "+":
             If match("=") Then
                 addToken PLUS_EQUAL
+            ElseIf (match("+")) Then
+                addToken PLUS_PLUS
             Else
                 addToken PLUS
             End If
         Case ";": addToken SEMICOLON
-        Case "*": addToken STAR
-        Case "&": addToken AMPERSAND
-        Case "#": addToken HASHTAG
+        Case "*":
+            If match("=") Then
+                addToken STAR_EQUAL
+            Else
+                addToken STAR
+            End If
+        Case "&":
+            If match("&") Then
+                addToken BRANCHING_AND_
+            Else
+                addToken AMPERSAND
+            End If
+        Case "#": raw_code_f
         Case "!":
             If match("=") Then
                 addToken BANG_EQUAL
@@ -119,7 +143,8 @@ Private Function scanToken()
                 While (peek() <> vbLf And Not isAtEnd()) ' NEWLINE CHARACTER POTENTIAL SOURCE OF ISSUES
                     advance
                 Wend
-                
+            ElseIf match("=") Then
+                addToken SLASH_EQUAL
             ElseIf (match("*")) Then
                 blockcomment_f
             Else
@@ -180,6 +205,27 @@ Private Function peek() As String
     End If
     peek = substring(m_source, m_current, m_current + 1)
 End Function
+Private Function raw_code_f()
+
+While (peek() <> "#" And Not isAtEnd())
+    If peek() = vbLf Then
+        m_line = m_line + 1
+    End If
+    advance
+Wend
+If (isAtEnd()) Then
+    m_h.error m_line, "Unterminated Raw Code Block"
+    Exit Function
+End If
+
+advance ' closing #
+Dim value As String
+value = substring(m_source, m_start + 1, m_current - 1)
+'value = Mid(m_source, m_start + 2, m_current - 1 - (m_start + 1) + 1) ' convoluted
+addTokenInternal RAW_, value
+
+End Function
+
 Private Function string_f()
 While (peek() <> """" And Not isAtEnd())
     If peek() = vbLf Then
@@ -206,7 +252,7 @@ Private Function blockcomment_f()
             m_line = m_line + 1
         End If
         If (peek() = "*") Then
-            If (peekNext() = "/") Then
+            If (peeknext() = "/") Then
                 endloop = True
                 GoTo hehehaha
             End If
@@ -231,7 +277,7 @@ While IsNumeric(peek())
     advance
 Wend
 
-If (peek() = "." And IsNumeric(peekNext())) Then
+If (peek() = "." And IsNumeric(peeknext())) Then
     advance
     
     While (IsNumeric(peek()))
@@ -242,7 +288,7 @@ addTokenInternal NUMBER_, CLng(substring(m_source, m_start, m_current))
 End Function
 
 Private Function identifier_F()
-While (isAlphaNumeric(peek()))
+While (isAlphaNumeric(peek()) Or peek() = ".")
 advance
 Wend
 Dim s As String
@@ -263,12 +309,12 @@ addToken type_
 End Function
 
 
-Private Function peekNext()
+Private Function peeknext()
 If (m_current + 1 >= Len(m_source)) Then
-    peekNext = ""
+    peeknext = ""
     Exit Function
 End If
-peekNext = substring(m_source, m_current + 1, m_current + 2)
+peeknext = substring(m_source, m_current + 1, m_current + 2)
 
 End Function
 

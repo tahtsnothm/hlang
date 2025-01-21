@@ -14,6 +14,10 @@ Enum tokentype
     STAR
     AMPERSAND
     HASHTAG
+    MOD_
+    
+    PLUS_PLUS
+    MINUS_MINUS
     
     PLUS_EQUAL
     MINUS_EQUAL
@@ -50,6 +54,11 @@ Enum tokentype
     TRUE_
     VAR_
     WHILE_
+    NEW_
+    PUBLIC_
+    PRIVATE_
+    BREAK_
+    CONTINUE_
     
     BRANCHING_AND_
     

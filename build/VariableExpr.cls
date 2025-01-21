@@ -10,9 +10,10 @@ Attribute VB_Exposed = False
 Implements Expr
 Public name As Token
 
+
 Public Function Expr_init(ParamArray arr() As Variant)
     st name, arr(0)
-
+    
 End Function
 
 Public Function Expr_accept(visitor As ExprVisitor) As Variant

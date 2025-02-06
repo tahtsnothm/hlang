@@ -26,3 +26,7 @@ Public Function visitCallExpr(expression As CallExpr)
 End Function
 Public Function visitDotExpr(expression As DotExpr)
 End Function
+Public Function visitAccessorExpr(expression As AccessorExpr)
+End Function
+Public Function visitFunctorExpr(expression As FunctorExpr)
+End Function

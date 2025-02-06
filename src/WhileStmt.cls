@@ -10,12 +10,13 @@ Attribute VB_Exposed = False
 Implements Stmt
 Public condition As Expr
 Public body As Stmt
+Public itx As Stmt
 
 
 Public Function Stmt_init(ParamArray arr() As Variant)
     st condition, arr(0)
     st body, arr(1)
-    
+    st itx, arr(2)
 End Function
 
 Public Function Stmt_accept(visitor As StmtVisitor) As Variant

@@ -10,15 +10,20 @@ Attribute VB_Exposed = False
 Private tokens As Variant
 Private current As Long
 Private m_h As H
+Private statements As Variant
+Private functorcounter As Long
 
 Public Function init(tokens_ As Variant, hh As H)
 tokens = tokens_
 current = 0
+
+statements = Array()
+functorcounter = 0
+
 Set m_h = hh
 End Function
 
 Public Function parse()
-    Dim statements() As Variant
     While (Not isAtEnd())
         arad statements, declaration_f()
     Wend
@@ -43,34 +48,75 @@ Private Function declaration_f()
     ElseIf (match(CLASS_)) Then
         st declaration_f, classDeclaration_f()
         Exit Function
+    ElseIf (match(ENUM_)) Then
+        st declaration_f, enumDeclaration_f()
+        Exit Function
+        
     End If
     
     st declaration_f, statement_f()
     
 End Function
+
+Private Function enumDeclaration_f() As Variant
+        Dim name As Token: st name, consume(IDENTIFIER, "Expected enum name")
+    Dim types_() As Variant
+    Call consume(LEFT_BRACE, "Expected '{' after enum")
+    Call arad(types_, consume(IDENTIFIER, "enum needs at least one name"))
+    While (match(COMMA))
+        Call arad(types_, consume(IDENTIFIER, "Expected identifier"))
+looplabel1bef:
+    Wend
+looplabel1aft:
+    Call consume(RIGHT_BRACE, "Expected '}' after enum declaration")
+    Dim temp As New EnumStmt
+    Call temp.Stmt_init(name, types_)
+    st enumDeclaration_f, temp
+    Exit Function
+End Function
 Private Function classDeclaration_f()
  Dim name As Token
 st name, consume(IDENTIFIER, "Expect class name.")
+
+Dim supercs() As Variant
 Dim superc As Token
 
 Dim hassuperclass As Boolean: hassuperclass = False
 If (match(LESS)) Then
-    hassuperclass = True
+
+    Do
+       st superc, consume(IDENTIFIER, "Expected Parent Class Name")
+        arad supercs, superc
+    Loop While (match(COMMA))
     
-    st superc, consume(IDENTIFIER, "Expected Parent Class Name")
 End If
 
 consume LEFT_BRACE, "Expect '{' before class body"
 Dim methods() As Variant
+Dim properties() As Variant
 
 While (Not check(RIGHT_BRACE) And Not isAtEnd())
-    arad methods, function_("method")
+
+    Dim vis As String: vis = ""
+    If (match(PUBLIC_)) Then
+        vis = "public"
+    ElseIf (match(PRIVATE_)) Then
+        vis = "private"
+    End If
+    
+    
+    
+    If ((peek().m_type_ = IDENTIFIER) And (peeknext().m_type_ = IDENTIFIER)) And peeknextnext().m_type_ = LEFT_PAREN Then
+        arad methods, function_("method", vis)
+    Else
+        arad properties, varDeclaration_f(vis)
+    End If
 Wend
 
 consume RIGHT_BRACE, "Expect '}' after class body."
 
 Dim temp As New ClassStmt
-temp.Stmt_init name, methods, superc, hassuperclass
+temp.Stmt_init name, methods, supercs, properties
 
 st classDeclaration_f, temp
 End Function
@@ -139,18 +185,28 @@ Private Function varDeclaration_f(Optional vis As String = "")
     Dim varName As Token
 
     st varName, consume(IDENTIFIER, "Expected variable name")
-    Dim initializer As Expr
     
+    Dim arrcount As New Expr
+    Dim hasarrcount As Boolean: hasarrcount = False
+    If (match(LEFT_SQUARE)) Then
+        
+        st arrcount, expression_()
+        hasarrcount = True
+        consume RIGHT_SQUARE, "Expected closing ']' for array declaration"
+    End If
+    
+    Dim initializer As New Expr
+    Dim addnew As Boolean: addnew = False
     
     Dim temp As New VarStmt
     If (match(EQUAL)) Then
-        Dim addnew As Boolean: addnew = False
+   
         If (match(NEW_)) Then addnew = True
         
         st initializer, expression_()
-        temp.Stmt_init vis, varType, varName, addnew, initializer
+        temp.Stmt_init vis, varType, varName, addnew, True, initializer, arrcount, hasarrcount
     Else
-        temp.Stmt_init vis, varType, varName 'do we need a null node hmm (no thats in the codeGen, for the init function to handle the boolean)
+        temp.Stmt_init vis, varType, varName, addnew, False, initializer, arrcount, hasarrcount  'do we need a null node hmm (no thats in the codeGen, for the init function to handle the boolean)
     End If
     consume SEMICOLON, "Expect ';' after variable declaration"
     st varDeclaration_f, temp
@@ -321,13 +377,18 @@ skiphere:
     
     Dim temp As New BlockStmt
     Dim tempinner As New ExprStmt
+    Dim itx As Stmt
+    Dim ee As New LiteralExpr
+    Dim pp As New ExprStmt
+    ee.Expr_init 1
+    pp.Stmt_init ee
     
+    st itx, pp
     If (Not isForEach) Then
         If (hasincrement) Then
-            
-            tempinner.Stmt_init increment
-            temp.Stmt_init Array(body, tempinner)
-            st body, temp
+            pp.Stmt_init increment
+
+            st itx, pp
         End If
         
         If (Not hascondition) Then
@@ -337,7 +398,7 @@ skiphere:
             
         End If
         Dim tempwhile As New WhileStmt
-        tempwhile.Stmt_init condition, body
+        tempwhile.Stmt_init condition, body, itx
         st body, tempwhile
         
         If (hasinitializer) Then
@@ -353,9 +414,10 @@ skiphere:
         Dim iteratingobjdeclarator As New VarStmt
         Dim iteratordeclarator As New VarStmt
         'type, name
+        Dim e As New Expr
         
-        iteratingobjdeclarator.Stmt_init "", iteratingobjtype, iteratingobj
-        iteratordeclarator.Stmt_init "", iteratortype, iterator
+        iteratingobjdeclarator.Stmt_init "", iteratingobjtype, iteratingobj, False, False, e, e, False
+        iteratordeclarator.Stmt_init "", iteratortype, iterator, False, False, e, e, False
         
         ttemp.Stmt_init iteratingobjdeclarator, iteratingobj, iterable, iteratordeclarator, iterator, body, hasDeclarator, hasIteratorDeclarator
         st forStatement_f, ttemp
@@ -368,10 +430,17 @@ Private Function whileStatement_f()
     st condition, expression_()
     
     consume RIGHT_PAREN, "Expected ')' after while condition"
-    Dim body As New Expr
-    st body, expression_()
+    Dim body As New Stmt
+    'st body, expression_()
+    st body, statement_f()
+
+    Dim ee As New LiteralExpr
+    Dim pp As New ExprStmt
+    ee.Expr_init 1
+    pp.Stmt_init ee
+
     Dim temp As New WhileStmt
-    temp.Stmt_init condition, body
+    temp.Stmt_init condition, body, pp
     
     st whileStatement_f, temp
 End Function
@@ -444,7 +513,7 @@ Private Function assignment_()
     Dim temp As New AssignExpr
     Dim tempbinary As New BinaryExpr
     Dim ops As New Token
-    
+    Dim one As New LiteralExpr
     Dim tempunary As New UnaryExpr
     
     Dim addnew As Boolean: addnew = False
@@ -458,6 +527,10 @@ Private Function assignment_()
         ElseIf (TypeName(expr_) = "CallExpr") Then
             temp.Expr_init expr_, value, addnew
             st expr_, temp
+        ElseIf (TypeName(expr_) = "AccessorExpr") Then
+        temp.Expr_init expr_, value, addnew
+            st expr_, temp
+        
         End If
         'raise error here
     ElseIf match(PLUS_EQUAL) Then
@@ -486,8 +559,13 @@ Private Function assignment_()
         st expr_, temp
     ElseIf match(PLUS_PLUS) Then
         ops.init PLUS, "+", Null, previous.m_line
-        tempunary.Expr_init ops, expr_.copy()
-        st expr_, tempunary
+        
+        one.Expr_init 1
+        
+        tempbinary.Expr_init expr_.copy(), ops, one 'minor bug if expr_ (LHS of assignment) is not pure
+        temp.Expr_init expr_, tempbinary, addnew
+        st expr_, temp
+
     ElseIf match(MINUS_MINUS) Then
         ops.init MINUS, "-", Null, previous.m_line
         tempunary.Expr_init ops, expr_.copy()
@@ -665,12 +743,60 @@ While Not exitwhile
     ElseIf (match(DOT)) Then
         st temp, finishDot(expr_.copy())
         st expr_, temp
+    ElseIf (match(LEFT_SQUARE)) Then
+        st temp, finishAccessor(expr_.copy())
+        st expr_, temp
     Else
         exitwhile = True
     End If
 Wend
 st call_, expr_
 End Function
+Private Function finishAccessor(accessee As Expr)
+Dim arguments() As Variant
+Dim colonCounter As Long: colonCounter = 0
+Dim commaPresent As Boolean: commaPresent = False
+    If (Not check(RIGHT_SQUARE)) Then
+    
+        arad arguments, expression_()
+        While (Not check(RIGHT_SQUARE) And (check(COLON) Or check(COMMA)) And (Not commaPresent And colonCounter < 2))
+            If (check(COLON)) Then
+                consume COLON, ""
+                colonCounter = colonCounter + 1
+            ElseIf check(COMMA) Then
+                consume COMMA, ""
+
+                commaPresent = True
+            End If
+            arad arguments, expression_()
+        Wend
+        
+        
+    End If
+    Dim paren As Token
+    st paren, consume(RIGHT_SQUARE, "Expect ']' after indices")
+
+    Dim valMode As String
+    If (commaPresent) Then
+        valMode = "val"
+    ElseIf (colonCounter = 0) Then
+        valMode = "access"
+    ElseIf (colonCounter = 1) Then
+        valMode = "slice"
+        Dim ee As New LiteralExpr
+        ee.Expr_init 1
+        arad arguments, ee 'default step size
+    ElseIf (colonCounter = 2) Then
+        valMode = "slice"
+    End If
+    
+    Dim temp As New AccessorExpr
+    
+    
+    temp.Expr_init accessee, paren, arguments, valMode
+    st finishAccessor, temp
+End Function
+
 Private Function finishCall(callee As Expr)
     Dim arguments() As Variant
     If (Not check(RIGHT_PAREN)) Then
@@ -678,7 +804,8 @@ Private Function finishCall(callee As Expr)
             If (al(arguments) > 254) Then
                 err peek(), "Can't have more than 255 arguments"
             End If
-            arad arguments, expression_()
+            arad arguments, callArgument_f()
+            'arad arguments, expression_()
         Loop While (match(COMMA))
     End If
     
@@ -692,6 +819,76 @@ Private Function finishCall(callee As Expr)
     st finishCall, temp
     
 End Function
+Private Function callArgument_f()
+    If (match(LEFT_SQUARE)) Then
+        Dim myfunctorExpr As FunctorExpr: st myfunctorExpr, New FunctorExpr
+        Dim inputs() As Variant
+        Call arad(inputs, consume(IDENTIFIER, "Expected identifier"))
+        While (match(COMMA))
+            Call arad(inputs, consume(IDENTIFIER, "Expected identifier"))
+looplabel0bef:
+        Wend
+looplabel0aft:
+        Call consume(RIGHT_SQUARE, "Expected ']'")
+        Dim arrowkey As Token: st arrowkey, consume(ARROW_, "Expected arrow for arrow sign")
+        Dim functorname As String: st functorname, "functl" & previous().m_line & "c" & functorcounter
+        nt st(functorcounter, functorcounter + 1)
+        Call myfunctorExpr.Expr_init(functorname)
+        Dim halfbody As Stmt
+        If (match(LEFT_BRACE)) Then
+            nt st(halfbody, block_f())
+        Else
+            Dim tempexpr As Expr: st tempexpr, expression_()
+            Dim tempbodyreturn As ReturnStmt: st tempbodyreturn, New ReturnStmt
+            Call tempbodyreturn.Stmt_init(arrowkey, tempexpr.copy(), True)
+            nt st(halfbody, tempbodyreturn)
+        End If
+        Dim body() As Variant
+        Dim param As Token
+        Dim i As Integer
+        For i = 0 To al(inputs) - 1
+            st param, inputs(i)
+            Dim tassignexpr As AssignExpr: st tassignexpr, New AssignExpr
+            Dim inputname As VariableExpr: st inputname, New VariableExpr
+            Dim arraccessor As AccessorExpr: st arraccessor, New AccessorExpr
+            Dim arrname As VariableExpr: st arrname, New VariableExpr
+            Dim arrnametoken As Token: st arrnametoken, New Token
+            Dim fakeBracket As Token: st fakeBracket, New Token
+            Dim numberr As LiteralExpr: st numberr, New LiteralExpr
+                        Dim wraps As ExprStmt: st wraps, New ExprStmt
+            Call arrnametoken.init(IDENTIFIER, "arr", "arr", arrowkey.m_line)
+            Call fakeBracket.init(LEFT_SQUARE, "[fake", "[fake", arrowkey.m_line)
+            Call numberr.Expr_init(i)
+            Call arrname.Expr_init(arrnametoken)
+            Call inputname.Expr_init(param)
+            Call arraccessor.Expr_init(arrname, fakeBracket, Array(numberr), "access", False)
+            Call tassignexpr.Expr_init(inputname, arraccessor, False)
+            
+            Call wraps.Stmt_init(tassignexpr)
+            Call arad(body, wraps)
+looplabel1bef:
+        Next i
+looplabel1aft:
+        Call arad(body, halfbody)
+        Dim functorClass As ClassStmt: st functorClass, New ClassStmt
+        Dim fstmt As FunctionStmt: st fstmt, New FunctionStmt
+        Call fstmt.Stmt_init(mkident("funct_run", arrowkey.m_line), mkident("variant", arrowkey.m_line), Array(mkident("arr", arrowkey.m_line)), Array(mkident("paramarray", arrowkey.m_line)), Array(False), body, "public")
+        Call functorClass.Stmt_init(mkident(functorname, arrowkey.m_line), Array(fstmt), Array(mkident("funct", arrowkey.m_line)), Array())
+        Call arad(statements, functorClass)
+        st callArgument_f, myfunctorExpr
+        Exit Function
+    Else
+        st callArgument_f, expression_()
+        Exit Function
+    End If
+End Function
+Private Function mkident(ByVal name As String, ByVal linenum As Long) As Token
+    Dim t As Token: st t, New Token
+    Call t.init(IDENTIFIER, name, name, linenum)
+    st mkident, t
+    Exit Function
+End Function
+
 
 Private Function finishDot(accessee As Expr)
     Dim done As Boolean: done = False
@@ -789,7 +986,7 @@ Private Function peeknextnext() As Token
 If (current + 2 >= al(tokens)) Then
     Dim a As New Token
     a.init EOF_, "", "", 999
-    Set peeknext = peek() 'guaranteed eof
+    Set peeknextnext = peek() 'guaranteed eof
     Exit Function
 End If
 st peeknextnext, tokens(current + 2)

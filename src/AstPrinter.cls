@@ -77,6 +77,27 @@ End Function
 
 
 
+Private Sub Class_Initialize()
+
+End Sub
+
+Private Sub Class_Terminate()
+
+End Sub
+
+Private Function ExprVisitor_visitAccessorExpr(expression As AccessorExpr) As Variant
+    Dim i As Long
+    Dim arggs As String: arggs = ""
+    For i = 0 To al(expression.arguments) - 1
+        Dim innerexpr As Expr
+        st innerexpr, expression.arguments(i)
+        arggs = arggs & innerexpr.accept(Me) & ","
+    Next i
+    If (al(expression.arguments) > 0) Then arggs = left(arggs, Len(arggs) - 1)
+    
+    st ExprVisitor_visitAccessorExpr, "(" & expression.accessee.accept(Me) & "[" & arggs & "]" & ")"
+End Function
+
 Private Function ExprVisitor_visitAssignExpr(expression As AssignExpr) As Variant
     st ExprVisitor_visitAssignExpr, "(assign " & expression.assignee.accept(Me) & " " & expression.value.accept(Me) & ")"
 End Function
@@ -102,6 +123,10 @@ End Function
 
 Private Function ExprVisitor_visitDotExpr(expression As DotExpr) As Variant
     ExprVisitor_visitDotExpr = expression.left.accept(Me) & "." & expression.right.accept(Me)
+End Function
+
+Private Function ExprVisitor_visitFunctorExpr(expression As FunctorExpr) As Variant
+    ExprVisitor_visitFunctorExpr = "functor!"
 End Function
 
 Private Function ExprVisitor_visitGroupingExpr(expression As GroupingExpr) As Variant
@@ -215,4 +240,7 @@ End Function
 
 Private Function StmtVisitor_visitWhileStmt(statement As WhileStmt) As Variant
     st StmtVisitor_visitWhileStmt, "(while " & statement.condition.accept(Me) & statement.body.accept(Me) & ")"
+End Function
+Private Function StmtVisitor_visitEnumStmt(statement As EnumStmt) As Variant
+    st StmtVisitor_visitEnumStmt, "enum"
 End Function

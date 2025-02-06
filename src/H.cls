@@ -56,6 +56,7 @@ Static Function err(tk As Token, message As String)
         report tk.m_line, " at end.", message
     Else
         report tk.m_line, " at '" + tk.m_lexeme + "'", message
+        
     End If
         
     

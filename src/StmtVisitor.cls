@@ -36,3 +36,6 @@ Public Function visitForEachStmt(statement As ForEachStmt)
 End Function
 Public Function visitControlStmt(statement As ControlStmt)
 End Function
+Public Function visitEnumStmt(statement As EnumStmt)
+End Function
+

@@ -12,6 +12,7 @@ Implements StmtVisitor
 
 Public output_file_path As String
 Public functions As String
+Public mainfile As String
 
 Public functionsdict As Scripting.Dictionary
 Public indentLevel As Long
@@ -23,6 +24,10 @@ Public loopscopes As Variant
 Public loopcounter As Long
 Public fcounter As Long
 
+Public classes As Scripting.Dictionary
+Public inClass As Boolean
+Public stdFunctionsUsed As Variant
+Public currentClass As String
 Public current_function_name As String
 Private f As Object
 
@@ -31,24 +36,30 @@ Private Sub Class_Initialize()
     ' default function will be in main
     ' theres a main thread for stuff
     ' and another one for functions
-    output_file_path = ThisWorkbook.Path & "\out.bas"
+    output_file_path = ThisWorkbook.Path
     indentLevel = 0
     current_function_name = "main"
     
     Set functionsdict = New Scripting.Dictionary
     
+    stdFunctionsUsed = Array()
     loopscopes = Array()
     loopcounter = 0
     ilevels = Array(0) '
     scopes = Array("main") ' just as a buffer for pop,
     indentType = "    "
     fcounter = 0
+    currentClass = ""
     
+    Set classes = New Scripting.Dictionary
+    inClass = False
+    
+    mainfile = ""
     ' to change when classes are supported
 End Sub
 
 Public Function setOutput(filename As String)
-    outputfilepath = filename
+    output_file_path = filename
 End Function
 
 
@@ -57,7 +68,7 @@ Public Function generate(statements As Variant)
     Dim i As Long
     
     Dim fso As New FileSystemObject
-    st f, fso.CreateTextFile(output_file_path)
+    st f, fso.CreateTextFile(output_file_path & "\main.bas")
     
     write_ "public sub main ()"
     indent
@@ -71,6 +82,16 @@ Public Function generate(statements As Variant)
     
     For i = 0 To al(functionsdict.Items) - 1
         write_ functionsdict(functionsdict.Keys()(i))
+    Next i
+    
+    finalise
+    
+    
+    Dim sf As Object
+    For i = 0 To al(classes.Items) - 1
+        st sf, fso.CreateTextFile(output_file_path & "\" & classes.Keys()(i) & ".cls")
+        sf.WriteLine classes(classes.Keys()(i))
+        sf.Close
     Next i
     'write_ functions
     f.Close
@@ -106,13 +127,46 @@ Private Function write_(s As String)
     For i = 0 To indentLevel - 1
         s = indentType & s
     Next i
+    
+    If inClass Then
+        classes(currentClass) = classes(currentClass) & s & vbLf
+        Exit Function
+    End If
+    
     If current_function_name = "main" Then
-        f.WriteLine s
+        mainfile = mainfile & vbLf & s
     Else
         functionsdict(current_function_name) = functionsdict(current_function_name) & vbLf & s
         functions = functions & vbLf & s
     End If
     
+End Function
+Private Function write_forward_(s As String)
+    Dim i As Long
+    For i = 0 To indentLevel - 1
+        s = indentType & s
+    Next i
+    
+    If inClass Then
+        classes(currentClass) = s & vbLf & classes(currentClass)
+        Exit Function
+    End If
+    
+    If current_function_name = "main" Then
+        mainfile = s & vbLf & mainfile
+    Else
+        functionsdict(current_function_name) = functionsdict(current_function_name) & vbLf & s
+        functions = functions & vbLf & s
+    End If
+    
+End Function
+
+Private Function finalise()
+f.WriteLine Replace(mainfile, vbLf, vbCrLf)
+End Function
+
+Private Function registerFunctionDependency(name As String)
+If (Not arrcontains(stdFunctionsUsed, name)) Then arad stdFunctionsUsed, name
 End Function
 
 Private Function ctyp(s As String)
@@ -131,9 +185,47 @@ Select Case s
 End Select
 End Function
 
+Private Function exprcast(item As Variant) As Expr
+    st exprcast, item
+End Function
+Private Function ExprVisitor_visitAccessorExpr(expression As AccessorExpr) As Variant
+
+    If (expression.valMode = "access") Then
+        If (expression.isLvalue) Then
+            If (al(expression.arguments) = 0) Then
+                st ExprVisitor_visitAccessorExpr, expression.accessee.accept(Me) & "(" & ")"
+            Else
+                st ExprVisitor_visitAccessorExpr, expression.accessee.accept(Me) & "(" & exprcast(expression.arguments(0)).accept(Me) & ")"
+            End If
+            Exit Function
+        Else
+            If (al(expression.arguments) = 0) Then
+                st ExprVisitor_visitAccessorExpr, (expression.accessee.accept(Me)) & "(" & ")"
+            Else
+                st ExprVisitor_visitAccessorExpr, expression.accessee.accept(Me) & "(" & exprcast(expression.arguments(0)).accept(Me) & ")"
+            End If
+        End If
+    ElseIf (expression.valMode = "slice") Then
+        registerFunctionDependency "h_slice"
+        st ExprVisitor_visitAccessorExpr, "h_slice(" & expression.accessee.accept(Me) & "," & exprcast(expression.arguments(0)).accept(Me) & "," & exprcast(expression.arguments(1)).accept(Me) & "," & exprcast(expression.arguments(2)).accept(Me) & ")"
+    ElseIf (expression.valMode = "val") Then
+            st ExprVisitor_visitAccessorExpr, expression.accessee.accept(Me) & ".rows(" & exprcast(expression.arguments(0)).accept(Me) & ").cells(" & exprcast(expression.arguments(1)).accept(Me) & ").value"
+    End If
+
+End Function
+
 Private Function ExprVisitor_visitAssignExpr(expression As AssignExpr) As Variant
     Dim aa As String: aa = ""
     If expression.addnew Then aa = "new "
+    
+    If (TypeName(expression.assignee) = "AccessorExpr") Then
+    
+        Dim a As New AccessorExpr
+        Set a = expression.assignee.copy()
+        a.isLvalue = True
+        st ExprVisitor_visitAssignExpr, "st (" & CStr(a.Expr_accept(Me)) & ", " & aa & expression.value.accept(Me) & ")"
+        Exit Function
+    End If
     st ExprVisitor_visitAssignExpr, "st (" & CStr(expression.assignee.accept(Me)) & ", " & aa & expression.value.accept(Me) & ")"
 End Function
 
@@ -225,7 +317,38 @@ Private Function StmtVisitor_visitBlockStmt(statement As BlockStmt) As Variant
 End Function
 
 Private Function StmtVisitor_visitClassStmt(statement As ClassStmt) As Variant
-
+    inClass = True
+    currentClass = statement.name.m_lexeme
+    
+    
+    pushscope currentClass
+    classes(currentClass) = ""
+    
+    Dim i As Long
+    
+    For i = 0 To al(statement.superclasses) - 1
+        Dim sc As Token
+        st sc, statement.superclasses(i)
+        
+        write_ "implements " & sc.m_lexeme
+    Next i
+    
+    For i = 0 To al(statement.properties) - 1
+        Dim vardec As VarStmt
+        st vardec, statement.properties(i)
+        vardec.Stmt_accept Me
+    Next i
+    
+    For i = 0 To al(statement.methods) - 1
+        Dim fst As FunctionStmt
+        st fst, statement.methods(i)
+        fst.Stmt_accept Me
+    Next i
+    
+    popscope
+    
+    currentClass = ""
+    inClass = False
 End Function
 
 Private Function StmtVisitor_visitCodeStmt(statement As CodeStmt) As Variant
@@ -299,7 +422,13 @@ For i = 0 To al(statement.params) - 1
     Dim ptype As Token: st ptype, statement.paramtypes(i)
     Dim paramname As String: paramname = statement.params(i).m_lexeme
     Dim paramtype As String: paramtype = statement.paramtypes(i).m_lexeme
-    args = args + bywhat + " " + paramname + " as " + ctyp(paramtype) + ", "
+    
+    If (paramtype = "paramarray") Then
+        args = args + " paramarray " + paramname + "() as variant, "
+    Else
+        args = args + bywhat + " " + paramname + " as " + ctyp(paramtype) + ", "
+    End If
+    'args = args + bywhat + " " + paramname + " as " + ctyp(paramtype) + ", "
 
 Next i
 If al(statement.params) > 0 Then args = left(args, Len(args) - 2)
@@ -360,6 +489,10 @@ Private Function StmtVisitor_visitVarStmt(statement As VarStmt) As Variant
     
     Dim visa As String: visa = "dim "
     If (statement.vis <> "") Then visa = statement.vis
+    
+    If statement.hasarrcount Then
+        statement.name.m_lexeme = statement.name.m_lexeme & "(0 to " & statement.arrcount.accept(Me) & " - 1)"
+    End If
     If statement.type_.m_lexeme = "array" Then
         s = visa & " " & statement.name.m_lexeme & "() as " & ctyp(statement.type_.m_lexeme)
     Else
@@ -381,9 +514,32 @@ Private Function StmtVisitor_visitWhileStmt(statement As WhileStmt) As Variant
     indent
     statement.body.accept Me
     write_ "looplabel" & loopscopes(al(loopscopes) - 1) & "bef:"
+    statement.itx.accept Me
     unindent
     write_ "wend"
     write_ "looplabel" & loopscopes(al(loopscopes) - 1) & "aft:"
     
     pop loopscopes, al(loopscopes) - 1
+End Function
+Private Function StmtVisitor_visitEnumStmt(statement As EnumStmt) As Variant
+    Call write_("enum " & statement.name.m_lexeme)
+    Dim s As String: st s, ""
+    Dim item As Token
+    Dim i As Integer
+    For i = 0 To al(statement.types_) - 1
+        st item, statement.types_(i)
+        nt st(s, s & item.m_lexeme & " ")
+    Next i
+    If (Len(s) > 2) Then
+        nt st(s, left(s, Len(s) - 2))
+    End If
+    indent
+    write_ s
+    unindent
+    Call write_("end enum")
+End Function
+Private Function ExprVisitor_visitFunctorExpr(expression As FunctorExpr) As Variant
+    Call write_forward_("dim m" & expression.name & " as new " & expression.name)
+    st ExprVisitor_visitFunctorExpr, "m" & expression.name
+    Exit Function
 End Function

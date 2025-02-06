@@ -10,15 +10,14 @@ Attribute VB_Exposed = False
 Implements Stmt
 Public name As Token
 Public methods As Variant ' of functions (methods
-Public superclass As Token
-Public hassuperclass As Boolean
-
+Public superclasses As Variant ' of tokens
+Public properties As Variant ' of varstmts
 
 Public Function Stmt_init(ParamArray arr() As Variant)
     st name, arr(0)
     st methods, arr(1)
-    st superclass, arr(2)
-    st hassuperclass, arr(3)
+    st superclasses, arr(2)
+    st properties, arr(3)
 End Function
 
 Public Function Stmt_accept(visitor As StmtVisitor) As Variant

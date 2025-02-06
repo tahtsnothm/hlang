@@ -4,6 +4,9 @@ Enum tokentype
     RIGHT_PAREN
     LEFT_BRACE
     RIGHT_BRACE
+    LEFT_SQUARE
+    RIGHT_SQUARE
+    
     COMMA
     COLON
     DOT
@@ -15,6 +18,7 @@ Enum tokentype
     AMPERSAND
     HASHTAG
     MOD_
+    ARROW_
     
     PLUS_PLUS
     MINUS_MINUS
@@ -59,6 +63,7 @@ Enum tokentype
     PRIVATE_
     BREAK_
     CONTINUE_
+    ENUM_
     
     BRANCHING_AND_
     
@@ -67,6 +72,5 @@ Enum tokentype
 
 End Enum
 'no support for numbers with decimals
-'breka
-'continue
+
 

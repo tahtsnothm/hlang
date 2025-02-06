@@ -7,7 +7,7 @@ Const cvsource As String = "D:\"
 
 
 Public Declare PtrSafe Function ShellExecute Lib "shell32.dll" _
-Alias "ShellExecuteA" (ByVal hWnd As Long, ByVal lpOperation As String, _
+Alias "ShellExecuteA" (ByVal hwnd As Long, ByVal lpOperation As String, _
 ByVal lpFile As String, ByVal lpParameters As String, ByVal lpDirectory As String, _
 ByVal nShowCmd As Long) As Long
 Public Sub updatePaths()
@@ -363,3 +363,84 @@ Public Function assert()
 End Function
 
 
+Public Function h_access(ByRef obj As Variant, ByVal idx As Variant) As Variant
+If (TypeName(obj) = "String") Then
+    If (idx < 0) Then
+        idx = Len(obj) + idx
+    End If
+    
+    h_access = Mid(obj, idx, 1)
+    Exit Function
+ElseIf (TypeName(obj) = "Dictionary") Then
+    h_access = obj(idx)
+    Exit Function
+Else
+    If (idx < 0) Then
+        idx = al(obj) + idx
+    End If
+    h_access = obj(idx)
+End If
+End Function
+
+Public Function h_slice(ByRef obj As Variant, ByVal first As Long, ByVal second As Long, ByVal step As Long) As Variant
+If (TypeName(obj) = "String") Then
+    h_slice = Mid(obj, first - 1, second - first)
+Else
+    Dim temp() As Variant
+    Dim i As Long
+    For i = first To second - 1 Step step
+        arad temp, obj(i)
+    Next i
+    h_slice = temp
+End If
+End Function
+
+Public Function h_val(ByRef obj As Variant, ByVal first As Long, ByVal second As Long)
+    st h_val, obj.rows(first).Cells(second).value
+End Function
+Function map(ByRef arr As Variant, ByRef functor As funct) As Variant
+    Dim newarr() As Variant
+    Dim item As Variant
+    Dim i As Integer
+    For i = 0 To al(arr) - 1
+        st item, arr(i)
+        Call arad(newarr, functor.run(item))
+looplabel2bef:
+    Next i
+looplabel2aft:
+    st map, newarr
+    Exit Function
+End Function
+
+
+
+ Function filter(ByRef arr As Variant, ByRef functor As funct) As Variant
+    Dim newarr() As Variant
+    Dim item As Variant
+    Dim i As Integer
+    For i = 0 To al(arr) - 1
+        st item, arr(i)
+        If ((functor.run(item))) Then
+            Call arad(newarr, item)
+        End If
+looplabel3bef:
+    Next i
+looplabel3aft:
+    st filter, newarr
+    Exit Function
+End Function
+
+
+
+ Function reduce(ByRef arr As Variant, ByRef functor As funct, ByVal base As Variant) As Variant
+    Dim item As Variant
+    Dim i As Integer
+    For i = 0 To al(arr) - 1
+        st item, arr(i)
+        nt st(base, functor.run(item, base))
+looplabel4bef:
+    Next i
+looplabel4aft:
+    st reduce, base
+    Exit Function
+End Function

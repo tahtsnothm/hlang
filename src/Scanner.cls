@@ -42,14 +42,15 @@ m_keywords("public") = PUBLIC_
 m_keywords("private") = PRIVATE_
 m_keywords("break") = BREAK_
 m_keywords("continue") = CONTINUE_
+m_keywords("enum") = ENUM_
 End Sub
 Public Function init(source As String, h_instance As H)
     m_source = preprocess(source)
     Set m_h = h_instance
 End Function
 Private Function preprocess(source As String) As String
-    preprocess = Replace(source, "[", "(")
-    preprocess = Replace(preprocess, "]", ")")
+    preprocess = Replace(source, "::", "_")
+    Exit Function
 End Function
 
 Public Function scanTokens() As Variant ' lsittokens
@@ -80,6 +81,8 @@ Private Function scanToken()
         Case ")": addToken RIGHT_PAREN
         Case "{": addToken LEFT_BRACE
         Case "}": addToken RIGHT_BRACE
+        Case "[": addToken LEFT_SQUARE
+        Case "]": addToken RIGHT_SQUARE
         Case ",": addToken COMMA
         Case ".": addToken DOT
         Case ":": addToken COLON
@@ -123,6 +126,8 @@ Private Function scanToken()
         Case "=":
             If match("=") Then
                 addToken EQUAL_EQUAL
+            ElseIf match(">") Then
+                addToken ARROW_
             Else
                 addToken EQUAL
             End If

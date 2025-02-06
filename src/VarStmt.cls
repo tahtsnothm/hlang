@@ -14,18 +14,17 @@ Public name As Token
 Public initializer As Expr
 Public addnew As Boolean
 Public hasinitializer As Boolean
-
+Public arrcount As Expr
+Public hasarrcount As Boolean
 Public Function Stmt_init(ParamArray arr() As Variant)
     st vis, arr(0)
     st type_, arr(1)
     st name, arr(2)
-    If (al(arr) = 3) Then
-        hasinitializer = False
-    Else
-        st initializer, arr(4)
-        st addnew, arr(3)
-        hasinitializer = True
-    End If
+    st addnew, arr(3)
+    st hasinitializer, arr(4)
+    st initializer, arr(5)
+    st arrcount, arr(6)
+    st hasarrcount, arr(7)
 End Function
 
 Public Function Stmt_accept(visitor As StmtVisitor) As Variant

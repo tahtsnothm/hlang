@@ -27,6 +27,7 @@ Limitations: must be able to work entirely in a locked down environment with exc
 - optional function arguments
 - autobundle required functions
 - include other files
+- Create objects inplace: see ```functorcode.h```
 - Closures
 - Buffered Spreadsheet Read/Writes
 - Type Checking

@@ -1,44 +1,6 @@
-// if (a != null && a.property == 10 && a.second_property) print("hi");
-
-
-
-//if (person != Nothing && (a.rank == "COL" && a.cep >= "LTC" ) && !a.retiring) print("eligible");
-
-
 func int fibonacci (int n) {
 	if (n <= 1) return 1;
 	return fibonacci(n - 1) + fibonacci(n-2);
 }
 
 print fibonacci(10);
-
-/*
-for (int i = 0; i == n; i += 1) {
-	
-if (first_cond and another_cond or anotheranother) {
-	firstaction(1, 2,3);
-} else if (second_cond) {
-	secondaction();
-} else {
-	thirdcondition;
-}
-}
-Stmt bodyLine;
-	for (int i = 0; i < al(statement.body); i+=1) {
-		bodyLine = statement.body(i);
-		bodyLine.accept(me);
-	}
-hello = (1 + 2 - 3 * 4 / 5 ) & "String";
-
-func int helper() {
-	// statement.body is a list of stmts
-	Stmt bodyLine;
-	for (int i = 0; i < al(statement.body); i+=1) {
-		bodyLine = statement.body(i);
-		bodyLine.accept(me);
-		return;
-	}
-
-	return bodyLine;
-}
-*/

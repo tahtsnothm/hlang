@@ -26,6 +26,7 @@ some environments only have excel.
 Limitations: must be able to work entirely in a locked down environment with excel, word, powerpoint and chrome installed
 - optional function arguments
 - autobundle required functions
+- include other files
 - Closures
 - Buffered Spreadsheet Read/Writes
 - Type Checking

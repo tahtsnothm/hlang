@@ -46,4 +46,8 @@ Limitations: must be able to work entirely in a locked down environment with exc
 - bootstrap the language
 - write a compiler in /compile to a non VBA language (while maintaining the original restrictions of compiling to VBA)
 
+## Use
+```hcc <filename>``` in vba immediate window
+
+cant find a way to get cli working without editing file associations
 ## Syntax

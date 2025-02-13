@@ -11,6 +11,7 @@ i never want to touch vba again.
 some environments only have excel.  
 
 ## Features / Improvements over VBA
+- cleaner declaration syntax
 - Consistent block syntax
 - Shortcircuiting Logical operator (s)
 - Upgraded VBA's foreach, now able to iterate over specific types instead of only```variant/object```
@@ -19,16 +20,28 @@ some environments only have excel.
 - Ability to create multiple classes in one file!
 - Expression Statements
 - Limited functors for use with ```map```, ```filter``` and ```reduce``` (not 100% tested)
+- Slice operators for accessing array elements, slicing an array, and accessing excel values
 
 ## Development and Future Plans (not anytime soon)
+Limitations: must be able to work entirely in a locked down environment with excel, word, powerpoint and chrome installed
+- optional function arguments
+- autobundle required functions
 - Closures
 - Buffered Spreadsheet Read/Writes
 - Type Checking
+- better typing for arrays and dictionaries
 - Try / Catch
+- Better error handling than try/catch
 - With statements
 - array/dictionary initialisers
 - inheritance
 - fix impure iterables in foreach loops
 - add variable resolver pass
+- external dll support
+- structs!
+- tooling: basic editor with syntax highlighting, also able to run entirely in vba
+- preprocessor macros
+- bootstrap the language
+- write a compiler in /compile to a non VBA language (while maintaining the original restrictions of compiling to VBA)
 
 ## Syntax

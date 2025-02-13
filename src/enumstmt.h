@@ -1,5 +1,3 @@
-string hello[3];
-hello[0] = "s";
 class EnumStmt < Stmt {
 	public Token name;
 	public variant types_;
@@ -46,27 +44,3 @@ func variant enumDeclaration_f() {
 	temp.stmt::init(name, types_);
 	return temp;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-persons = [person, person, ]
-person = [bob, me7, lfdkjdf, kifdlj,]
-
-persons.map({name, rank, age} => {
-
-})
-
-
-

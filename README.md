@@ -19,7 +19,7 @@ some environments only have excel.
 - Removed need to add ```set``` when assigning objects
 - Ability to create multiple classes in one file!
 - Expression Statements
-- Limited functors for use with ```map```, ```filter``` and ```reduce``` (not 100% tested)
+- Limited lambdas for use with ```map```, ```filter``` and ```reduce``` (not 100% tested)
 - Slice operators for accessing array elements, slicing an array, and accessing excel values
 
 ## Development and Future Plans (not anytime soon)
@@ -46,8 +46,63 @@ Limitations: must be able to work entirely in a locked down environment with exc
 - bootstrap the language
 - write a compiler in /compile to a non VBA language (while maintaining the original restrictions of compiling to VBA)
 
+
+## TODO: 
+- bootstrap 
+- add inheritance (copy default implementations)
+- import c libraries (for text editor implementation)
+- variadic functions?
+- class initialise too
+
 ## Use
 ```hcc <filename>``` in vba immediate window
 
 cant find a way to get cli working without editing file associations
+`src` - import target
+`build` - export target
+
+`output` - compile target
+
+## Dev Env
+create a blank `.xlsm` file. 
+add references as shown below
+
+```
+Microsoft Scripting Runtime
+Microsoft VBScript Regular Expressions 5.5
+Microsoft Visual Basic for Applications Extensibility
+```
+
+drag in `import.bas`
+run the sub `import`
+
+now you have a master copy of the code, remove the code from `src` and `build`. (files should be committed to git anyway)
+to backup at any point, export and commit
 ## Syntax
+```
+[one, two] => {} 
+[one, two] => one + two
+
+
+enum name {
+  one, 
+  two, 
+  three
+
+}
+// no func needed within class
+class Car {
+  public void drive() {
+
+  }
+
+}
+
+
+for (item : array) (String item) {
+  int i;
+  for (i : array2) (i) {
+    pt(item, i);
+  }
+}
+```

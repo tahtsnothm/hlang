@@ -1,0 +1,79 @@
+class H {
+    private bool hadError;
+
+    public void init () {
+        hadError = false;
+    }
+    
+    string removeExt (string filename) {
+        long dotPos = instrrev(filename, ".");
+        if (dotPos > 0) {
+            return left(filename, dotPos - 1);
+        }
+        return filename; 
+    } 
+
+    public void compile (string filepath) {
+        FileSystemObject fso = new FileSystemObject;
+        if (fso.FileExists(filepath)) {
+            runFile(filepath); 
+        } else if (fso.FolderExists(filepath)) {
+            for (file : fso.getfolder(filepath).files) (file file) {
+                runFile(file.path); 
+            }
+        } else {
+            // not found 
+        }
+    }
+    
+    public void runFile(string filename) {
+        FileSystemObject fso = new FileSystemObject;
+        TextStream ts = fso.OpenTextFile(filename);
+
+        string rawcode = ts.ReadAll;
+        rawcode = replace(rawcode, vbcrlf, vblf);
+        runCode(rawcode, removeExt(dir(filename)));
+        # ts.close #
+
+    }
+    static void error(long line, string message) {
+        report (line, "", message); 
+    }
+    private void report(long line, string where, string msg) {
+        pt ("[line", line, "] Error", where, ": ", msg); 
+        hadError = true;
+    }
+    static void err(Token tk, string message) {
+        if (tk.m_type_ == EOF_) {
+            report (tk.m_line, " at end.", message);
+        } else {
+            report (tk.m_line, " at '" + tk.m_lexeme + "'", message);
+        }
+    } 
+
+    private void runCode(string source, string filename) {
+        Scanner s = new Scanner;
+        variant tk;
+        array tokens; 
+        s.init(source, me);
+        tokens = s.scanTokens();
+
+        Parser parser = new parser;
+        parser.init(tokens, me);
+        variant statements = parser.parse();
+
+
+        if (hadError) {
+            pt ("ERROR");
+            return; 
+        }
+
+        AstPrinter astp = new AstPrinter;
+        astp.prt(statements);
+
+        CodeGenerator gen = new CodeGenerator;
+        
+        gen.generate (statements,filename);
+        return;
+    }
+}

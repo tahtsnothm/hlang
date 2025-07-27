@@ -1,0 +1,249 @@
+class Scanner {
+    private string m_source;
+    private array m_tokens;
+    private long m_start;
+    private long m_current;
+    private long m_line;
+    private H m_h;
+    private Dictionary m_keywords;
+    public void init(string source, H h_instance) {
+        m_source = preprocess(source);
+        m_tokens = array();
+        m_start = 0;
+        m_current = 0;
+        m_line = 1;
+        m_h = h_instance;
+
+        m_keywords = new Dictionary;
+        m_keywords["and"] = AND_;
+        m_keywords["class"] = CLASS_;
+        m_keywords["else"] = ELSE_;
+        m_keywords["false"] = FALSE_;
+        m_keywords["for"] = FOR_;
+        m_keywords["func"] = FUNC_;
+        m_keywords["if"] = IF_;
+        m_keywords["null"] = NULL_;
+        m_keywords["or"] = OR_;
+        m_keywords["print"] = PRINT_;
+        m_keywords["return"] = RETURN_;
+        m_keywords["super"] = SUPER_;
+        m_keywords["this"] = THIS_;
+        m_keywords["true"] = TRUE_;
+        m_keywords["var"] = VAR_;
+        m_keywords["while"] = WHILE_;
+        m_keywords["new"] = NEW_;
+        m_keywords["public"] = PUBLIC_;
+        m_keywords["private"] = PRIVATE_;
+        m_keywords["static"] = STATIC_;
+        m_keywords["break"] = BREAK_;
+        m_keywords["continue"] = CONTINUE_;
+        m_keywords["enum"] = ENUM_;
+    }
+
+    private string preprocess(string source) {
+        return replace(source, "::", "_");
+    }
+
+    public array scanTokens() {
+        while (!isAtEnd()) {
+            m_start = m_current;
+            scanToken();
+        }
+
+        Token newtoken = new Token;
+        newtoken.init(EOF_, "", null, m_line);
+        arad(m_tokens, newtoken);
+        return m_tokens;
+    }
+
+    private bool isAtEnd() {
+        return m_current >= len(m_source);
+    }
+
+    private void scanToken() {
+        # dim rawquote as string : rawquote = """" #
+        string c = advance();
+        if (c == "(") addToken(LEFT_PAREN);
+        else if (c == ")") addToken(RIGHT_PAREN);
+        else if (c == "{") addToken(LEFT_BRACE);
+        else if (c == "}") addToken(RIGHT_BRACE);
+        else if (c == "[") addToken(LEFT_SQUARE);
+        else if (c == "]") addToken(RIGHT_SQUARE);
+        else if (c == ",") addToken(COMMA);
+        else if (c == ".") addToken(DOT);
+        else if (c == ":") addToken(COLON);
+        else if (c == "%") addToken(MOD_);
+        else if (c == "-") {
+            if (match("=")) addToken(MINUS_EQUAL);
+            else if (match("-")) addToken(MINUS_MINUS);
+            else addToken(MINUS);
+        }
+        else if (c == "+") {
+            if (match("=")) addToken(PLUS_EQUAL);
+            else if (match("+")) addToken(PLUS_PLUS);
+            else addToken(PLUS);
+        }
+        else if (c == ";") addToken(SEMICOLON);
+        else if (c == "*") {
+            if (match("=")) addToken(STAR_EQUAL);
+            else addToken(STAR);
+        }
+        else if (c == "&") {
+            if (match("&")) addToken(BRANCHING_AND_);
+            else addToken(AMPERSAND);
+        }
+        else if (c == "#") raw_code_f();
+        else if (c == "!") {
+            if (match("=")) addToken(BANG_EQUAL);
+            else addToken(BANG);
+        }
+        else if (c == "=") {
+            if (match("=")) addToken(EQUAL_EQUAL);
+            else if (match(">")) addToken(ARROW_);
+            else addToken(EQUAL);
+        }
+        else if (c == ">") {
+            if (match("=")) addToken(GREATER_EQUAL);
+            else addToken(GREATER);
+        }
+        else if (c == "<") {
+            if (match("=")) addToken(LESS_EQUAL);
+            else addToken(LESS);
+        }
+        else if (c == "/") {
+            if (match("/")) {
+                while (peek() != vblf && !isAtEnd()) advance();
+            } else if (match("=")) addToken(SLASH_EQUAL);
+            else if (match("*")) blockcomment_f();
+            else addToken(SLASH);
+        }
+        else if (c == " " or c == chr(9)) { // tab
+            // ignore whitespace
+        }
+        else if (c == vblf) {
+            m_line = m_line + 1;
+        }
+        else if (c == rawquote) {
+            string_f();
+        }
+        else if (isDigit(c)) {
+            number_f();
+        }
+        else if (isAlpha(c)) {
+            identifier_f();
+        }
+        else {
+            m_h.error(m_line, "Unexpected character.");
+        }
+    }
+
+    private void addToken(tokentype type_) {
+        addTokenInternal(type_, null);
+    }
+
+    private void addTokenInternal(tokentype type_, variant literal) {
+        string text = substring(m_source, m_start, m_current);
+        Token newtoken = new Token;
+        newtoken.init(type_, text, literal, m_line);
+        arad(m_tokens, newtoken);
+    }
+
+    private string advance() {
+        m_current = m_current + 1;
+        return charAt(m_source, m_current - 1);
+    }
+
+    private bool match(string expected) {
+        if (isAtEnd()) return false;
+        if (charAt(m_source, m_current) != expected) return false;
+        m_current = m_current + 1;
+        return true;
+    }
+
+    private string peek() {
+        if (isAtEnd()) return "";
+        return substring(m_source, m_current, m_current + 1);
+    }
+
+    private string peeknext() {
+        if (m_current + 1 >= len(m_source)) return "";
+        return substring(m_source, m_current + 1, m_current + 2);
+    }
+
+    private void raw_code_f() {
+        while (peek() != "#" && !isAtEnd()) {
+            if (peek() == vblf) m_line = m_line + 1;
+            advance();
+        }
+        if (isAtEnd()) {
+            m_h.error(m_line, "Unterminated Raw Code Block");
+            return;
+        }
+        advance(); // closing #
+        string value = substring(m_source, m_start + 1, m_current - 1);
+        addTokenInternal(RAW_, value);
+    }
+
+    private void string_f() {
+        # dim rawquote as string : rawquote = """" #
+        while (peek() != rawquote && !isAtEnd()) {
+            if (peek() == vblf) m_line = m_line + 1;
+            advance();
+        }
+        if (isAtEnd()) {
+            m_h.error(m_line, "Unterminated string");
+            return;
+        }
+        advance(); // closing quote
+        string value = substring(m_source, m_start + 1, m_current - 1);
+        addTokenInternal(STRING_, value);
+    }
+
+    private void blockcomment_f() {
+        while (true) {
+            if (peek() == vblf) m_line = m_line + 1;
+            if (peek() == "*" && peeknext() == "/") {
+                advance(); advance();
+                break;
+            }
+            if (isAtEnd()) return;
+            advance();
+        }
+    }
+
+    private void number_f() {
+        while (isDigit(peek())) advance();
+        if (peek() == "." && isDigit(peeknext())) {
+            advance();
+            while (isDigit(peek())) advance();
+        }
+        string num = substring(m_source, m_start, m_current);
+        addTokenInternal(NUMBER_, clng(num));
+    }
+
+    private void identifier_f() {
+        while (isAlphaNumeric(peek()) or peek() == ".") advance();
+        string s = substring(m_source, m_start, m_current);
+        tokentype type_;
+        if (m_keywords.containsKey(s)) {
+            type_ = m_keywords[s];
+        } else {
+            type_ = IDENTIFIER;
+        }
+        addToken(type_);
+    }
+
+    private bool isAlpha(string c) {
+        return (asc(c) >= asc("a") and asc(c) <= asc("z")) or
+               (asc(c) >= asc("A") and asc(c) <= asc("Z")) or
+               c == "_";
+    }
+
+    private bool isDigit(string c) {
+        return isNumeric(c);
+    }
+
+    private bool isAlphaNumeric(string c) {
+        return isAlpha(c) or isDigit(c);
+    }
+}

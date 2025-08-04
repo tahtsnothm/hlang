@@ -49,10 +49,13 @@ Limitations: must be able to work entirely in a locked down environment with exc
 
 ## TODO: 
 - bootstrap 
+-- writing exprs, finished grouping expr
+
 - add inheritance (copy default implementations)
 - import c libraries (for text editor implementation)
 - variadic functions?
 - class initialise too
+- empty main files (used for classes only) will not make new files
 
 ## Use
 ```hcc <filename>``` in vba immediate window
@@ -91,7 +94,7 @@ enum name {
 
 }
 // no func needed within class
-class Car {
+class Car < Vehicle{
   public void drive() {
 
   }

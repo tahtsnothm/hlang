@@ -1,0 +1,152 @@
+
+class Expr {
+    public variant accept(ExprVisitor visitor) {}
+    public variant copy() {}
+}
+
+class AccessorExpr < Expr {
+    public Expr accessee;
+    public Token paren;
+    public variant arguments;
+    public string valMode;
+    public bool isLvalue;
+
+    public void init(Expr a, Token b, variant c, string d) {
+        accessee = a;
+        paren = b;
+        arguments = c;
+        valMode = d;
+        isLvalue = false;
+    }
+
+    public variant Expr::accept(ExprVisitor visitor) {
+        return visitor.visitAccessorExpr(Me); 
+    }
+
+    private variant Expr::copy() {
+        AccessorExpr temp = new AccessorExpr;
+        array newargs;
+        for (Expr arg : arguments) (long i) {
+            arad(newargs, arg.copy());
+        }
+        temp.init(accessee.copy(), paren, newargs, valMode);
+        return temp;
+    }
+}
+
+class AssignExpr < Expr {
+    public Expr assignee;
+    public Expr value;
+    public bool addnew;
+    
+    public void init(Expr a, Expr b, bool c) {
+        assignee = a;
+        value = b; 
+        addnew = c; 
+    }
+    private variant Expr::copy() {
+        AssignExpr temp = new AssignExpr;
+        temp.init(assignee.copy(), value.copy(), addnew); 
+        return temp;
+    }
+    public variant Expr::accept(ExprVisitor visitor) {
+        return visitor.visitAssignExpr(Me);
+    }
+}
+
+
+class BinaryExpr < Expr {
+    Expr left;
+    Token operator;
+    Expr right;
+
+    public void init (Expr a, Token b, Expr c) {
+        left = a;
+        operator = b; 
+        right = c; 
+    }
+    public variant Expr::accept(ExprVisitor visitor) {
+        return visitor.visitBinaryExpr(Me);
+    }
+    private variant Expr::copy() {
+        BinaryExpr temp = new BinaryExpr;
+        temp.init(left.copy(), operator, right.copy());
+        return temp; 
+    }
+}
+
+class CallExpr < Expr {
+    public Expr callee;
+    public Token paren;
+    public variant arguments;
+    
+    public void init(Expr a, Token b, variantc) {
+        callee = a;
+        paren = b; 
+        arguments = c; 
+    }
+    private variant Expr::copy() {
+        CallExpr temp = new CallExpr;
+        array newargs;
+        for (Expr arg : arguments) (long i) {
+            arad(newargs, arg.copy()); 
+        }
+        temp.init(callee.copy(), paren, newargs); 
+        return temp;
+    }
+    public variant Expr::accept(ExprVisitor visitor) {
+        return visitor.visitCallExpr(Me);
+    }
+}
+
+class DotExpr < Expr {
+    public Expr left;
+    public Expr right;
+
+    public void init (Expr a, Expr b) {
+        left = a;
+        right = b;
+    }
+    
+    public variant Expr::accept(ExprVisitor visitor) {
+        return visitor.visitDotExpr(Me);
+    }
+    private variant Expr::copy() {
+        DotExpr temp = new DotExpr;
+        temp.init(left.copy(), right.copy()); 
+        return temp;
+    }
+}
+
+class FunctExpr < Expr {
+    public string name;
+    public void init (string a) {
+        name = a; 
+    }
+    public variant Expr::accept(ExprVisitor visitor) {
+        return visitor.visitFunctExpr(Me);
+    }
+
+    private variant Expr::copy() {
+        FunctExpr temp = new FunctExpr;
+        temp.init(name);
+        return temp;
+    }
+}
+
+class GroupingExpr < Expr {
+    public Expr expression;
+    public void init(Expr a) {
+        expression = a; 
+    }
+
+    public variant Expr::accept(ExprVisitor visitor) {
+        return visitor.visitGroupingExpr(Me);
+    }
+
+    public variant Expr::copy() {
+        GroupingExpr temp = new GroupingExpr;
+        temp.init(expression.copy());
+        return temp;
+    }
+}

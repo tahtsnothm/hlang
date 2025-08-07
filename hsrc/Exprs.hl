@@ -3,7 +3,19 @@ class Expr {
     public variant accept(ExprVisitor visitor) {}
     public variant copy() {}
 }
-
+class ExprVisitor {
+    public variant visitUnaryExpr(UnaryExpr expression) {}
+    public variant visitBinaryExpr(UnaryExpr expression) {}
+    public variant visitLiteralExpr(UnaryExpr expression) {}
+    public variant visitGroupingExpr(UnaryExpr expression) {}
+    public variant visitAssignExpr(UnaryExpr expression) {}
+    public variant visitVariableExpr(UnaryExpr expression) {}
+    public variant visitLogicalExpr(UnaryExpr expression) {}
+    public variant visitCallExpr(UnaryExpr expression) {}
+    public variant visitDotExpr(UnaryExpr expression) {}
+    public variant visitAccessorExpr(UnaryExpr expression) {}
+    public variant visitFunctExpr(UnaryExpr expression) {}
+}
 class AccessorExpr < Expr {
     public Expr accessee;
     public Token paren;
@@ -80,7 +92,7 @@ class CallExpr < Expr {
     public Token paren;
     public variant arguments;
     
-    public void init(Expr a, Token b, variantc) {
+    public void init(Expr a, Token b, variant c) {
         callee = a;
         paren = b; 
         arguments = c; 
@@ -114,7 +126,7 @@ class DotExpr < Expr {
     private variant Expr::copy() {
         DotExpr temp = new DotExpr;
         temp.init(left.copy(), right.copy()); 
-        return temp;
+        return temp; 
     }
 }
 
@@ -149,4 +161,70 @@ class GroupingExpr < Expr {
         temp.init(expression.copy());
         return temp;
     }
+}
+
+class LiteralExpr < Expr {
+    public variant value;
+    public void init(variant a) {
+        value = a;
+    }
+
+    public variant Expr::accept(ExprVisitor visitor) {
+        return visitor.visitLiteralExpr(Me);
+    }
+    public variant Expr::copy () {
+        return me;
+    }
+}
+
+class LogicalExpr < Expr {
+    public Expr left;
+    public Token operator;
+    public Expr right;
+
+    public void init (Expr a, Token b, Expr c) {
+        left = a;
+        operator b;
+        right = c;
+    }
+    public variant Expr::accept(ExprVisitor visitor) {
+        return visitor.visitLogicalExpr(Me);
+    }
+
+    private variant Expr::copy () {
+        LogicalExpr temp = new LogicalExpr;
+        temp.init(left, operator,right);
+        return temp;
+    }
+}
+class UnaryExpr < Expr {
+    public Token operator;
+    public Expr right;
+    public void init (Token a, Expr b) {
+        operator = a;
+        right = b;
+    }
+    public variant Expr::accept(ExprVisitor visitor) {
+        return visitor.visitUnaryExpr(Me);
+    }
+    private variant Expr::copy() {
+        UnaryExpr temp = new UnaryExpr;
+        temp.init(operator, right);
+        return temp;
+    }
+}
+
+class VariableExpr < Expr {
+    public Token name;
+    public void init (Token a) {
+        name = a;
+    }
+    public variant Expr::accept(ExprVisitor visitor) {
+        return visitor.visitVariableExpr(Me);
+    }
+    private variant Expr::copy() {
+        return me;
+    }
+
+      
 }

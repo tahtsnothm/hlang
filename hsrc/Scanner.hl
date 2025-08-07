@@ -1,3 +1,23 @@
+// including token in this file to save space
+
+class Token {
+    public tokentype m_type_;
+    public string m_lexeme;
+    public variant m_literal;
+    public long m_line;
+
+    public void init(tokentype a, string b, variant c, long d) {
+        m_type_ = a;
+        m_lexeme = b;
+        m_literal = c;
+        m_line = d;
+    }
+    public string toString() {
+        return m_type_ & " " & m_lexeme & " " & literal;
+    }
+}
+
+
 class Scanner {
     private string m_source;
     private array m_tokens;

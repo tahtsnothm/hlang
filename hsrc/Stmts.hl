@@ -1,0 +1,217 @@
+class Stmt {
+    public variant accept(StmtVisitor visitor) {
+
+    }
+}
+
+class StmtVisitor {
+    public variant visitVarStmt(VarStmt statement) {}    
+    public variant visitExprStmt(ExprStmt statement) {}    
+    public variant visitPrintStmt(PrintStmt statement) {}    
+    public variant visitBlockStmt(BlockStmt statement) {}    
+    public variant visitIfStmt(IfStmt statement) {}    
+    public variant visitWhileStmt(WhileStmt statement) {}    
+    public variant visitFunctionStmt(FunctionStmt statement) {}    
+    public variant visitClassStmt(ClassStmt statement) {}    
+    public variant visitCodeStmt(CodeStmt statement) {}    
+    public variant visitReturnStmt(ReturnStmt statement) {}    
+    public variant visitForEachStmt(ForEachStmt statement) {}    
+    public variant visitControlStmt(ControlStmt statement) {}    
+    public variant visitEnumStmt(EnumStmt statement) {}    
+}
+
+
+class BlockStmt < Stmt {
+    public variant statements;
+    public void init (variant a) {
+        statements = a;
+    }
+    public variant Stmt::accept(StmtVisitor visitor) {
+        return visitor.visitBlockStmt(Me);
+    }
+}
+class ClassStmt < Stmt {
+    public Token name;
+    public variant methods; // list of methods under the class
+    public variant superclasses;
+    public variant properties;
+
+    public void init (Token a, variant b, variant c, variant d) {
+        name = a;
+        methods = b;
+        superclasses = c;
+        properties = d;
+    }
+    public variant Stmt::accept(StmtVisitor visitor) {
+        return visitor.visitClassStmt(Me);
+    }
+}
+class CodeStmt < Stmt {
+    public string code;
+    public void init (string a) {
+        code = a;
+    }
+    public variant Stmt::accept(StmtVisitor visitor) {
+        return visitor.visitCodeStmt(Me);
+    }
+}
+class ControlStmt < Stmt {
+    public Token keyword;
+    public void init (Token a) {
+        keyword = a;
+    }
+    public variant Stmt::accept(StmtVisitor visitor) {
+        return visitor.visitControlStmt(Me);
+    }
+}
+class EnumStmt < Stmt {
+    public Token name;
+    public variant types_;
+    public void init (Token a, variant b) {
+        name = a;
+        types_ = b;
+    }
+    public variant Stmt::accept(StmtVisitor visitor) {
+        return visitor.visitEnumStmt(Me);
+    }
+}
+class ExprStmt < Stmt {
+    public Expr expression;
+    public void init (Expr a) {
+        expression = a;
+    }
+    public variant Stmt::accept(StmtVisitor visitor) {
+        return visitor.visitExprStmt(Me);
+    }
+}
+class ForEachStmt < Stmt {
+    public VarStmt objdeclarator;
+    public Token obj;
+
+    public Expr iterable;
+    public VarStmt iteratordeclarator;
+    public Token iterator;
+    public Stmt body;
+    public bool hasDeclarator;
+    public bool hasIteratorDeclarator;
+
+    public void init (VarStmt a, Token b, Expr c,
+    VarStmt d, Token e, Stmt f, bool g, bool h) {
+       objdeclarator = a;
+       obj = b;
+       iterable = c;
+       iteratordeclarator = d;
+       iterator = e;
+       body = f;
+       hasDeclarator = g;
+       hasIteratorDeclarator = h; 
+    }
+    public variant Stmt::accept(StmtVisitor visitor) {
+        return visitor.visitForEachStmt(Me);
+    }
+}
+
+class FunctionStmt < Stmt {
+    public Token name;
+    public variant params;
+    public variant paramtypes; // token[]
+    public variant parammethod; // bool[]
+    public variant body; // Stmt[]
+    public token returntype;
+    public string visibility;
+
+    public void init (Token a, variant b, variant c, variant d, 
+    variant e, token f, string g) {
+        name = a;
+        params = b;
+        paramtypes = c;
+        parammethod = d;
+        body = e;
+        visibility = f;
+    }
+    public variant Stmt::accept(StmtVisitor visitor) {
+        return visitor.visitFunctionStmt(Me);
+    }
+}
+class IfStmt < Stmt {
+    public Expr condition;
+    public Stmt thenBranch;
+    public Stmt elseBranch;
+    public bool hasElse;
+
+    public void init (Expr a, Stmt b, Stmt c, bool d) {
+        // need to put in a nullstmt for c
+        condition = a;
+        thenBranch = b;
+        elseBranch = c;
+        hasElse = d;
+    } 
+
+    public variant Stmt::accept(StmtVisitor visitor) {
+        return visitor.visitIfStmt(Me);
+    }
+}
+
+class PrintStmt < Stmt {
+    public Expr expression;
+    public void init (Expr a) {
+        expression = a;
+    }
+
+    public variant Stmt::accept(StmtVisitor visitor) {
+        return visitor.visitPrintStmt(Me);
+    }
+}
+class ReturnStmt < Stmt {
+    public Token keyword;
+    public bool hasValue;
+    public Expr value;
+    public void init (Token a, Expr b, bool c) {
+        keyword = a;
+        value = b ;
+        hasValue = c;
+    }
+
+    public variant Stmt::accept(StmtVisitor visitor) {
+        return visitor.visitReturnStmt(Me);
+    }
+}
+
+class VarStmt < Stmt {
+    public string vis;
+    public token type_;
+    public token name;
+    public Expr initializer;
+    public bool addnew;
+    public bool hasinitializer;
+    public Expr arrcount;
+    public bool hasarrcount;
+    public void init (string a, token b, token c, expr d, bool e, 
+    bool f, Expr g, bool h) {
+        vis = a;
+        type_ = b;
+        name = c; 
+        initializer = d;
+        addnew = e;
+        arrcount = f;
+        hasarrcount = g;
+    } 
+    public variant Stmt::accept(StmtVisitor visitor) {
+        return visitor.visitVarStmt(Me);
+    }
+}
+
+class WhileStmt < Stmt {
+    public expr condition;
+    public Stmt body;
+    public Stmt itx;
+
+    public void init (expr a, stmt b, stmt c) {
+        condition = a;
+        body = b; 
+        itx = c;
+    }
+    public variant Stmt::accept(StmtVisitor visitor) {
+        return visitor.visitWhileStmt(Me);
+    }
+}

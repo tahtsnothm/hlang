@@ -177,15 +177,15 @@ private function scanToken()
                                                                                 else
                                                                                     if (c = "/") then 
                                                                                         if (match("/")) then 
-private function funcl115c0() as Boolean
-    funcl115c0 = false
+private function funcl135c0() as Boolean
+    funcl135c0 = false
     if (peek() <> vblf) then
         if (not isAtEnd()) then
-            funcl115c0 = true
+            funcl135c0 = true
         endif
     endif
 end function
-                                                                                            while (funcl115c0())
+                                                                                            while (funcl135c0())
                                                                                                 call advance()
                                                                                                 looplabel1bef:
                                                                                                 nt 1
@@ -303,15 +303,15 @@ end function
 
 
 private function raw_code_f() 
-private function funcl174c1() as Boolean
-    funcl174c1 = false
+private function funcl194c1() as Boolean
+    funcl194c1 = false
     if (peek() <> "#") then
         if (not isAtEnd()) then
-            funcl174c1 = true
+            funcl194c1 = true
         endif
     endif
 end function
-    while (funcl174c1())
+    while (funcl194c1())
         if (peek() = vblf) then 
             nt st (m_line, m_line + 1)
         endif
@@ -332,15 +332,15 @@ end function
 
 private function string_f() 
      dim rawquote as string : rawquote = """" 
-private function funcl189c2() as Boolean
-    funcl189c2 = false
+private function funcl209c2() as Boolean
+    funcl209c2 = false
     if (peek() <> rawquote) then
         if (not isAtEnd()) then
-            funcl189c2 = true
+            funcl209c2 = true
         endif
     endif
 end function
-    while (funcl189c2())
+    while (funcl209c2())
         if (peek() = vblf) then 
             nt st (m_line, m_line + 1)
         endif
@@ -364,15 +364,15 @@ private function blockcomment_f()
         if (peek() = vblf) then 
             nt st (m_line, m_line + 1)
         endif
-private function funcl205c3() as Boolean
-    funcl205c3 = false
+private function funcl225c3() as Boolean
+    funcl225c3 = false
     if (peek() = "*") then
         if (peeknext() = "/") then
-            funcl205c3 = true
+            funcl225c3 = true
         endif
     endif
 end function
-        if (funcl205c3()) then 
+        if (funcl225c3()) then 
             call advance()
             call advance()
             goto looplabel4aft:
@@ -395,15 +395,15 @@ private function number_f()
         nt 1
     wend
     looplabel5aft:
-private function funcl216c4() as Boolean
-    funcl216c4 = false
+private function funcl236c4() as Boolean
+    funcl236c4 = false
     if (peek() = ".") then
         if (isDigit(peeknext())) then
-            funcl216c4 = true
+            funcl236c4 = true
         endif
     endif
 end function
-    if (funcl216c4()) then 
+    if (funcl236c4()) then 
         call advance()
         while (isDigit(peek()))
             call advance()

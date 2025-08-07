@@ -49,8 +49,7 @@ Limitations: must be able to work entirely in a locked down environment with exc
 
 ## TODO: 
 - bootstrap 
--- writing exprs, finished grouping expr
-
+-- done writing exprs
 - add inheritance (copy default implementations)
 - import c libraries (for text editor implementation)
 - variadic functions?

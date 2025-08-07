@@ -1,0 +1,177 @@
+class Parser {
+    private variant tokens; 
+    private long current;
+    private H m_h;
+    private variant statements;
+    private long functcounter;
+
+    public void init (variant tokens_, H hh) {
+        tokens = tokens_;
+        current = 0;
+
+        statements = array();
+        functcounter = 0;
+
+        m_h = hh;
+    }
+    
+    public void parse() {
+        while (!isAtEnd()) {
+            arad (statements, declaration_f());
+        }
+        return statements;
+    }
+
+    private stmt declaration_f() {
+        string vis = "";
+        if (match(PUBLIC_)) {
+            vis = "public";
+        } else if (match (PRIVATE_)) {
+            vis = "private";
+        }
+
+        if ((peek().m_type_ == IDENTIFIER) and 
+        (peeknext().m_type_ == IDENTIFIER)) {
+            return varDeclaration_f(vis);
+        } else if (match(FUNC_)) {
+            return function_("function", vis);
+        } else if (match(CLASS_)) {
+            return classDeclaration_f();
+        } else if (match(ENUM_)) {
+            return enumDeclaration_f();
+        }
+        return statement_f();
+    }
+
+    private EnumStmt enumDeclaration_f() {
+        Token name = consume(IDENTIFIER, "expected enum name");
+        array types_;
+
+        consume(LEFT_BRACE, "Expected '{' after enum");
+        arad(types_, consume(IDENTIFIER, "Enum needs at least one name"));
+        while (match (COMMA)) {
+            arad(types_, consume(IDENTIFIER, "Expected identifier"));
+        }
+        consume(RIGHT_BRACE, "Expected '}' after enum declaration");
+        EnumStmt temp = new EnumStmt;
+        temp.init(name, types_);
+        return temp;
+    }
+
+    private ClassStmt classDeclaration_f () {
+        Token name = consume(IDENTIFIER, "Expected class name");
+        
+        array supercs;
+        token superc;
+        bool hassuperclass = false;
+        if (match(LESS)) {
+            superc = consume(IDENTIFIER, "Expected parent class name");
+            arad(supercs, superc);
+            while (match(COMMA)) {
+                superc = consume(IDENTIFIER, "Expected parent class name");
+                arad(supercs, superc);
+            }
+        }
+        consume(LEFT_BRACE, "Expect '{' before class body");
+        array methods;
+        array properties;
+
+        while (!check(RIGHT_BRACE) and !isAtEnd()) {
+            string vis = "";
+            if (match(PUBLIC_)) {
+                vis = "public";
+            } else if (match(PRIVATE_)) {
+                vis = "private";
+            } else if (match(STATIC_)) {
+                vis = "static";
+            }
+
+            if ((peek().m_type_ == IDENTIFIER) and 
+            peeknext().m_type_ == IDENTIFIER)) {
+                arad(methods, function_("method", vis));
+            } else {
+                arad(properties, varDeclaration_f(vis));
+            }
+        }
+        consume(RIGHT_BRACE, "Expected '{' after class body");
+
+        ClassStmt temp = new ClassStmt;
+        temp.init(name, methods, supercs, properties);
+        return temp;
+    }
+    private FunctionStmt function_ (string kind, string vis) {
+        Token returntype = consume(IDENTIFIER, "Expected return type before function name");
+        Token name = consume (IDENTIFIER, "Expected " & kind & " name");
+        consume (LEFT_PAREN, "Expected '(' after " & kind & " name");
+        array parameters;
+        array parammethods;
+        array parametertypes;
+
+        if (!check(RIGHT_PAREN)) {
+            // do while but hlang doesn have
+            if (al(parameters) > 254) {
+                err(peek(), "cant have more than 255 params");
+            }
+            arad(parametertypes, consume(IDENTIFIER, "expected param type"));
+            arad(parammethods, match(AMPERSAND));
+            arad(parameters, consume(IDENTIFIER, "Expected parameter name"));
+            while (match(COMMA)) {
+                if (al(parameters) > 254) {
+                    err(peek(), "cant have more than 255 params");
+                }
+                arad(parametertypes, consume(IDENTIFIER, "expected param type"));
+                arad(parammethods, match(AMPERSAND));
+                arad(parameters, consume(IDENTIFIER, "Expected parameter name"));
+            }
+        }
+        consume(RIGHT_PAREN, "Expected ')' after parameters"); 
+        consume(LEFT_BRACE, "Expect '{' before " & kind & " body");
+
+        BlockStmt body = block_f();
+        FunctionStmt temp = new FunctionStmt;
+        temp.init(name, returntype, parameters, parametertypes, parammethods, body, vis);
+        return temp;
+    }
+
+    private bool isTypeName (Token tk) {
+        if (tk.m_type == IDENTIFIER) {
+            if (tk.m_lexeme == "int") {
+                return true;
+            } else if (tk.m_lexeme == "string") {
+                return true;
+            } else if (tk.m_lexeme == "bool") {
+                return true;  
+            } else if (tk.m_lexeme == "long") {
+                return true;
+            } else {
+                return false;
+            } 
+       }
+    }
+
+    private VarStmt varDeclaration_f(string vis) {
+        Token vartype = consume (IDENTIFIER, "Expected type before variable name");
+        Token varName = consume(IDENTIFIER, "Expected variable name after type");
+
+        Expr arrcount = new Expr;
+        bool hasarrcount = false;
+
+        if (match(LEFT_SQUARE)) {
+            arrcount = expression_();
+            hasarrcount = true;
+            consume(RIGHT_SQUARE, "Expected closing ']' for array declaration");
+        }
+        expr initializer = new expr;
+        bool addnew = false;
+        VarStmt temp = new VarStmt;
+        if (match(EQUAL)) {
+            if (match(NEW_)) addnew = true;
+            temp.init(vis, vartype, varname, addnew, true, initializer, arrcount, hasarrcount );
+        } else {
+            temp.init(vis, vartype, varname, addnew, false, initializer, arrcount, hasarrcount );
+        }
+        consume(SEMICOLON, "Expect ';' after variable declaration");
+        return temp;
+    }
+
+}

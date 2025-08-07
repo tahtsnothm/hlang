@@ -50,6 +50,7 @@ Limitations: must be able to work entirely in a locked down environment with exc
 ## TODO: 
 - bootstrap 
 -- done writing exprs
+-- starting on parser , statement_f
 - add inheritance (copy default implementations)
 - import c libraries (for text editor implementation)
 - variadic functions?
@@ -85,6 +86,11 @@ to backup at any point, export and commit
 [one, two] => {} 
 [one, two] => one + two
 
+
+// dynamic arrays 
+
+array hi;
+arad(hi, item);
 
 enum name {
   one, 

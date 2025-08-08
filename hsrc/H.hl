@@ -18,7 +18,7 @@ class H {
         if (fso.FileExists(filepath)) {
             runFile(filepath); 
         } else if (fso.FolderExists(filepath)) {
-            for (file : fso.getfolder(filepath).files) (file file) {
+            for (file file : fso.getfolder(filepath).files) (long i) {
                 runFile(file.path); 
             }
         } else {

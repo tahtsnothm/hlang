@@ -5,16 +5,16 @@ class Expr {
 }
 class ExprVisitor {
     public variant visitUnaryExpr(UnaryExpr expression) {}
-    public variant visitBinaryExpr(UnaryExpr expression) {}
-    public variant visitLiteralExpr(UnaryExpr expression) {}
-    public variant visitGroupingExpr(UnaryExpr expression) {}
-    public variant visitAssignExpr(UnaryExpr expression) {}
-    public variant visitVariableExpr(UnaryExpr expression) {}
-    public variant visitLogicalExpr(UnaryExpr expression) {}
-    public variant visitCallExpr(UnaryExpr expression) {}
-    public variant visitDotExpr(UnaryExpr expression) {}
-    public variant visitAccessorExpr(UnaryExpr expression) {}
-    public variant visitFunctExpr(UnaryExpr expression) {}
+    public variant visitBinaryExpr(BinaryExpr expression) {}
+    public variant visitLiteralExpr(LiteralExpr expression) {}
+    public variant visitGroupingExpr(GroupingExpr expression) {}
+    public variant visitAssignExpr(AssignExpr expression) {}
+    public variant visitVariableExpr(VariableExpr expression) {}
+    public variant visitLogicalExpr(LogicalExpr expression) {}
+    public variant visitCallExpr(CallExpr expression) {}
+    public variant visitDotExpr(DotExpr expression) {}
+    public variant visitAccessorExpr(AccessorExpr expression) {}
+    public variant visitFunctExpr(FunctExpr expression) {}
 }
 class AccessorExpr < Expr {
     public Expr accessee;

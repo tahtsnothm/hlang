@@ -1,5 +1,5 @@
 func void hcc(string filename) {
     H hh = new H;
-    H.init();
+    hh.init();
     hh.compile(ThisWorkbook.Path + "\" + filename);
 }

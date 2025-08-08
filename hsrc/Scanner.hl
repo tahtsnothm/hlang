@@ -26,7 +26,7 @@ class Scanner {
     private long m_line;
     private H m_h;
     private Dictionary m_keywords;
-    public void init(string source, H h_instance) {
+    public void init(string source, H &h_instance) {
         m_source = preprocess(source);
         m_tokens = array();
         m_start = 0;
@@ -132,7 +132,7 @@ class Scanner {
         }
         else if (c == "/") {
             if (match("/")) {
-                while (peek() != vblf && !isAtEnd()) advance();
+                while (peek() != vblf and !isAtEnd()) advance();
             } else if (match("=")) addToken(SLASH_EQUAL);
             else if (match("*")) blockcomment_f();
             else addToken(SLASH);
@@ -191,7 +191,7 @@ class Scanner {
     }
 
     private void raw_code_f() {
-        while (peek() != "#" && !isAtEnd()) {
+        while (peek() != "#" and !isAtEnd()) {
             if (peek() == vblf) m_line = m_line + 1;
             advance();
         }
@@ -206,7 +206,7 @@ class Scanner {
 
     private void string_f() {
         # dim rawquote as string : rawquote = """" #
-        while (peek() != rawquote && !isAtEnd()) {
+        while (peek() != rawquote and !isAtEnd()) {
             if (peek() == vblf) m_line = m_line + 1;
             advance();
         }
@@ -222,7 +222,7 @@ class Scanner {
     private void blockcomment_f() {
         while (true) {
             if (peek() == vblf) m_line = m_line + 1;
-            if (peek() == "*" && peeknext() == "/") {
+            if (peek() == "*" and peeknext() == "/") {
                 advance(); advance();
                 break;
             }
@@ -233,7 +233,7 @@ class Scanner {
 
     private void number_f() {
         while (isDigit(peek())) advance();
-        if (peek() == "." && isDigit(peeknext())) {
+        if (peek() == "." and isDigit(peeknext())) {
             advance();
             while (isDigit(peek())) advance();
         }
@@ -245,7 +245,7 @@ class Scanner {
         while (isAlphaNumeric(peek()) or peek() == ".") advance();
         string s = substring(m_source, m_start, m_current);
         tokentype type_;
-        if (m_keywords.containsKey(s)) {
+        if (m_keywords.exists(s)) {
             type_ = m_keywords[s];
         } else {
             type_ = IDENTIFIER;

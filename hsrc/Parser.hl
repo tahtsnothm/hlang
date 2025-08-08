@@ -86,8 +86,7 @@ class Parser {
                 vis = "static";
             }
 
-            if ((peek().m_type_ == IDENTIFIER) and 
-            peeknext().m_type_ == IDENTIFIER)) {
+            if ((peek().m_type_ == IDENTIFIER) and (peeknext().m_type_ == IDENTIFIER)) {
                 arad(methods, function_("method", vis));
             } else {
                 arad(properties, varDeclaration_f(vis));
@@ -174,4 +173,636 @@ class Parser {
         return temp;
     }
 
+    private Stmt statement_f() {
+        if (match(IF_)) {
+            return ifStatement_f(); 
+        } else if (match(PRINT_)) {
+            return printStatement_f(); 
+        } else if (match(LEFT_BRACE)) {
+            BlockStmt block = new BlockStmt;
+            block.init(block_f());
+            return block; 
+        } else if (match (WHILE_)) {
+            return whileStatement_f(); 
+        } else if (match(FOR_)) {
+            return forStatement_f(); 
+        } else if (match (RETURN_)) {
+            return returnStatement_f(); 
+        } else if (match(RAW_)) {
+            return codeStatement_f();
+        } else if (match(CONTINUE_, BREAK_)) {
+            return controlStatement_f(); 
+        }
+        return expressionStatement_f(); 
+    }
+
+    private ReturnStmt returnStatement_f() {
+        Token keyword = previous();
+        Expr value;
+        ReturnStmt temp = new ReturnStmt;
+        if (!check(SEMICOLON)) {
+            value = expression_();
+            temp.init(keyword, value, true); 
+        } else {
+            LiteralExpr empty = new LiteralExpr;
+            empty.init ("null");
+            temp.init(keyword, empty, false);
+        }
+        consume(SEMICOLON, "Expected ';' after return");
+        return temp;
+    }
+
+    private CodeStmt codeStatement_f() {
+        Token codeblock = previous();
+        CodeStmt temp = new CodeStmt;
+        temp.init(codebloc.m_literal);
+        return temp;
+    }
+
+    private Stmt forStatement_f() {
+        consume(LEFT_PAREN, "Expected '(' after 'for'");
+        bool isForEach = false;
+        Token iteratingobj;
+        VarStmt vardecin;
+        ExprStmt exdecin;
+        VariableExpr varexprin;
+
+        bool hasDeclarator = false;
+        Stmt initializer;
+        Token iteratingobjtype;
+        Expr iterable;
+
+        if (check(IDENTIFIER) and 
+        (peeknext().m_type_ == COLON or peeknextnext().m_type_ == COLON) 
+        ) {
+            // foreach loop
+            isForEach = true;
+            if (peeknext.m_type_ == IDENTIFIER) {
+                hasDeclarator = true;
+                iteratingobjtype = consume(IDENTIFIER, "Expected type name");
+            }
+            iteratingobj = consume(IDENTIFIER, "Expected Variable Name");
+            consume(COLON, "Expected ':' in for clause");
+            iterable = expression_();
+            consume(RIGHT_PAREN, "Expected ')' after 'for' clause");
+        } else {
+            bool hasinitializer = true; 
+            if (match(SEMICOLON)) {
+                hasinitializer = false;
+            } else if (isTypeName(peek())) {
+                initializer = varDeclaration_f(); 
+            } else {
+                initializer = expressionStatement_f(); 
+            }
+            Expr condition;
+            bool hascondition = false;
+            Expr increment;
+            bool hasincrement = false;
+            if (!check(SEMICOLON)) {
+                condition = expression_();
+                hascondition = true;
+            }
+            consume(SEMICOLON, "Expect ';' after loop condition");
+
+            if (!check(RIGHT_PAREN)) {
+                increment = expression_();
+                hasincrement = true; 
+            }
+            consume(RIGHT_PAREN, "Expected ')' after for clause");
+        }
+        Token iterator;
+        Token iteratortype;
+        bool hasIteratorDeclarator = false;
+        if (isForEach) {
+            consume(LEFT_PAREN, "Expected '(' for 'foreach' loop"); 
+            if (peeknext().m_type_ == IDENTIFIER) {
+                hasIteratorDeclarator = true;
+                iteratortype = consume (IDENTIFIER, "Expected iterator type");
+            }
+            iterator = consume(IDENTIFIER, "Expected variable name");
+            consume(RIGHT_PAREN, "Expected ')' after for clause");
+        }
+        Stmt body = statement_f();
+        BlockStmt temp = new BlockStmt;
+        ExprStmt tempinner = new ExprStmt;
+        Stmt itx; 
+        LiteralExpr one = new LiteralExpr;
+        ExprStmt incr = new ExprStmt;
+        one.init(1);
+        incr.init(one);
+        itx = incr;
+        if (!isForEach) {
+            if (hasincrement)  {
+                incr.init(increment);
+                itx = incr;
+            }
+            if (!hascondition) {
+                LiteralExpr tmp = new LiteralExpr;
+                tmp.init(true);
+                condition = tmp;
+            }
+            WhileStmt tempwhile = new WhileStmt;
+            tempwhile.init(condition, body, itx);
+            body = tempwhile;
+            if (hasinitializer) {
+                BlockStmt tempblock = new BlockStmt;
+                tempblock.init(array(initializer, body)); 
+
+                return tempblock;
+            } else {
+                return body;
+            }
+        } else {
+            ForEachStmt tempforeach = new ForEachStmt;
+            VarStmt iteratingobjdeclarator = new VarStmt;
+            VarStmt iteratordeclarator = new VarStmt;
+
+            Expr e = new Expr;
+
+            iteratingobjdeclarator.init("", iteratingobjtype, iteratingobj, False, False, e, e, False);
+            iteratordeclarator.init("", iteratortype, iterator, False, False, e, e, False);
+        
+            tempforeach.init(iteratingobjdeclarator, iteratingobj, iterable, iteratordeclarator, iterator, body, hasDeclarator, hasIteratorDeclarator);
+            return tempforeach;
+        }
+    }
+
+    private WhileStmt whileStatement_f() {
+        consume(LEFT_PAREN, "Expected '(' after 'while'"); 
+        Expr condition = expression_();
+
+        consume(RIGHT_PAREN, "Expected ')' after while condition");
+        Stmt body = statement_f();
+
+        LiteralExpr one = new LiteralExpr;
+        ExprStmt incr = new ExprStmt;
+        one.init(1);
+        incr.init(one);
+        WhileStmt tempwhile = new WhileStmt;
+        tempwhile.init(condition, body, incr);
+        return tempwhile;
+    }
+
+    private IfStmt ifStatement_f() {
+        consume(LEFT_PAREN, "Expected '(' after 'if'.");
+        Expr condition = expression_();
+        consume(RIGHT_PAREN, "Expected ')' after condition");
+
+        Stmt thenBranch = statement_f();
+        Stmt elseBranch;
+
+        IfStmt temp = new IfStmt;
+        if (match(ELSE_)) {
+            elseBranch = statement_f();
+        }
+        temp.init(condition, thenBranch, elseBranch);
+
+        return temp;
+    }
+
+    private PrintStmt printStatement_f() {
+        Expr val = expression_();
+        consume(SEMICOLON, "Expect ';' after value");
+        PrintStmt temp = new PrintStmt;
+        temp.init(val);
+        return temp;
+    }
+
+    private ExprStmt expressionStatement_f() {
+        ExprStmt temp = new ExprStmt;
+        temp.init(expression_());
+        consume(SEMICOLON, "Expect ';' after value");
+        return temp;
+    }
+
+    private array block_f() {
+        array statements;
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            Stmt temp = declaration_f();
+            arad(statements, temp);
+        }
+        consume(RIGHT_BRACE, "Expect '}' after block");
+        return statements;
+    }
+
+    private Expr expression_() {
+        return assignment_();
+    }
+    private Expr assignment_() {
+        Expr expr_ = br_and_f();
+        Token eqs;
+        Expr value;
+        AssignExpr temp = new AssignExpr;
+        BinaryExpr tempbinary = new BinaryExpr;
+        Token ops = new Token;
+        LiteralExpr one = new LiteralExpr;
+        UnaryExpr tempunary = new UnaryExpr;
+
+        bool addnew = false;
+        if (match(EQUAL)) {
+            if (match(NEW_)) addnew = true;
+            eqs = previous();
+            value = assignment_();
+            if (TypeName(expr_) == "VariableExpr") {
+                temp.init(expr_, value, addnew);
+                expr_ = temp;
+            } else if (TypeName(expr_) == "CallExpr") {
+                temp.init(expr_, value, addnew);
+                expr_ = temp;
+            } else if (TypeName(expr_) == "AccessorExpr") {
+                temp.init(expr_, value, addnew);
+                expr_ = temp;
+            }
+            //  raise error 
+        } else if (match(PLUS_EQUAL)) {
+            ops.init(PLUS, "+", null, previous().m_line);
+            value = assignment_();
+            tempbinary.init(expr_.copy(), ops, value); // minor bug if expr_ LHS not pure
+            temp.init(expr_, tempbinary, addnew);
+            expr_ = temp;
+        } else if (match(MINUS_EQUAL)) {
+            ops.init(MINUS, "-", null, previous().m_line);
+            value = assignment_();
+            tempbinary.init(expr_.copy(), ops, value);
+            temp.init(expr_, tempbinary, addnew);
+            expr_ = temp;
+        } else if (match(STAR_EQUAL)) {
+            ops.init(STAR, "*", null, previous().m_line);
+            value = assignment_();
+            tempbinary.init(expr_.copy(), ops, value);
+            temp.init(expr_, tempbinary, addnew);
+            expr_ = temp;
+        } else if (match(SLASH_EQUAL)) {
+            ops.init(SLASH, "/", null, previous().m_line);
+            value = assignment_();
+            tempbinary.init(expr_.copy(), ops, value);
+            temp.init(expr_, tempbinary, addnew);
+            expr_ = temp;
+        } else if (match(PLUS_PLUS)) {
+            ops.init(PLUS, "+", null, previous().m_line);
+            one.init(1);
+            tempbinary.init(expr_.copy(), ops, one);
+            temp.init(expr_, tempbinary, addnew);
+            expr_ = temp;
+        } else if (match(MINUS_MINUS)) {
+            ops.init(MINUS, "-", null, previous().m_line);
+            tempunary.init(ops, expr_.copy());
+            expr_ = tempunary;
+        }
+
+        return expr_;
+    }
+
+    private Expr br_and_f() {
+        // branching and
+        Expr expr_ = or_f();
+        while (match(BRANCHING_AND_)) {
+            Token operator = previous();
+            Expr right = or_f();
+            LogicalExpr temp = new LogicalExpr;
+            temp.init(expr_.copy(), operator, right);
+            expr_ = temp;
+        }
+        return expr_;
+    }
+
+    private Expr or_f() {
+        Expr expr_ = and_f();
+        while (match(OR_)) {
+            Token operator = previous();
+            Expr right = and_f();
+            BinaryExpr temp = new BinaryExpr;
+            Expr prevExpr = expr_.copy();
+            temp.init(prevExpr, operator, right);
+            expr_ = temp;
+        }
+        return expr_;
+    }
+
+    private Expr and_f() {
+        Expr expr_ = equality_();
+        while (match(AND_)) {
+            Token operator = previous();
+            Expr right = equality_();
+            BinaryExpr temp = new BinaryExpr;
+            Expr prevExpr = expr_.copy();
+            temp.init(prevExpr, operator, right);
+            expr_ = temp;
+        }
+        return expr_;
+    }
+
+    private Expr equality_() {
+        Expr expr_ = comparison_();
+        while (match(BANG_EQUAL, EQUAL_EQUAL)) {
+            Token operator = previous();
+            Expr right = comparison_();
+            BinaryExpr temp = new BinaryExpr;
+            temp.init(expr_.copy(), operator, right);
+            expr_ = temp;
+        }
+        return expr_;
+    }
+
+    private Expr comparison_() {
+        Expr expr_ = term_();
+        while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
+            Token operator = previous();
+            Expr right = term_();
+            BinaryExpr temp = new BinaryExpr;
+            temp.init(expr_.copy(), operator, right);
+            expr_ = temp;
+        }
+        return expr_;
+    }
+
+    private Expr term_() {
+        Expr expr_ = factor_();
+        while (match(MINUS, PLUS, AMPERSAND, MOD_)) {
+            Token operator = previous();
+            Expr left = expr_.copy();
+            Expr right = factor_();
+            BinaryExpr temp = new BinaryExpr;
+            temp.init(left, operator, right);
+
+            // refactored out a cast <- cast to Expr if parser fails 
+            expr_ = temp;
+        }
+        return expr_;
+    }
+
+    private Expr factor_() {
+        Expr expr_ = unary_();
+        while (match(SLASH, STAR)) {
+            Token operator = previous();
+            Expr right = unary_();
+            Expr left = expr_.copy();
+            BinaryExpr temp = new BinaryExpr;
+            temp.init(left, operator, right);
+            expr_ = temp;
+        }
+        return expr_;
+    }
+
+    private Expr unary_() {
+        if (match(BANG, MINUS)) {
+            Token operator = previous();
+            Expr right = unary_();
+            UnaryExpr temp = new UnaryExpr;
+            temp.init(operator, right);
+            return temp;
+        } else {
+            return call_();
+        }
+    }
+
+    private Expr call_() {
+        Expr expr_ = primary_();
+        while (true) {
+            if (match(LEFT_PAREN)) {
+                expr_ = finishCall(expr_.copy());
+            } else if (match(DOT)) {
+                expr_ = finishDot(expr_.copy());
+            } else if (match(LEFT_SQUARE)) {
+                expr_ = finishAccessor(expr_.copy());
+            } else {
+                break;
+            }
+        }
+        return expr_;
+    }
+
+    private AccessorExpr finishAccessor(Expr accessee) {
+        array arguments;
+        long colonCounter = 0;
+        bool commaPresent = false;
+
+        if (!check(RIGHT_SQUARE)) {
+            arad(arguments, expression_());
+            while (!check(RIGHT_SQUARE) and (check(COLON) or check(COMMA)) and (!commaPresent and colonCounter < 2)) {
+                if (check(COLON)) {
+                    consume(COLON, "");
+                    colonCounter++;
+                } else if (check(COMMA)) {
+                    consume(COMMA, "");
+                    commaPresent = true;
+                }
+                arad(arguments, expression_());
+            }
+        }
+
+        Token paren = consume(RIGHT_SQUARE, "Expect ']' after indices");
+
+        string valMode;
+        if (commaPresent) {
+            valMode = "val";
+        } else if (colonCounter == 0) {
+            valMode = "access";
+        } else if (colonCounter == 1) {
+            valMode = "slice";
+            LiteralExpr ee = new LiteralExpr;
+            ee.init(1);
+            arad(arguments, ee); // default step size
+        } else if (colonCounter == 2) {
+            valMode = "slice";
+        }
+
+        AccessorExpr temp = new AccessorExpr;
+        temp.init(accessee, paren, arguments, valMode);
+        return temp;
+    }
+
+    private CallExpr finishCall(Expr callee) {
+        array arguments;
+        if (!check(RIGHT_PAREN)) {
+            if (al(arguments) > 254) {
+                err(peek(), "Can't have more than 255 arguments");
+            }
+            arad(arguments, callArgument_f());
+
+            while (match(COMMA)) {
+                if (al(arguments) > 254) {
+                    err(peek(), "Can't have more than 255 arguments");
+                }
+                arad(arguments, callArgument_f());
+            }
+        }
+        Token paren = consume(RIGHT_PAREN, "Expect ')' after arguments");
+
+        CallExpr temp = new CallExpr;
+        temp.init(callee, paren, arguments);
+        return temp;
+    }
+
+    private Expr callArgument_f() {
+        if (match(LEFT_SQUARE)) {
+            FunctExpr myfunctExpr = new FunctExpr;
+            array inputs;
+            arad(inputs, consume(IDENTIFIER, "Expected identifier"));
+            while (match(COMMA)) {
+                arad(inputs, consume(IDENTIFIER, "Expected identifier"));
+            }
+            consume(RIGHT_SQUARE, "Expected ']'");
+
+            Token arrowkey = consume(ARROW_, "Expected arrow for arrow sign");
+            string functname = "functl" & previous().m_line & "c" & functcounter;
+            functcounter = functcounter + 1;
+
+            myfunctExpr.init(functname);
+
+            Stmt halfbody;
+            if (match(LEFT_BRACE)) {
+                halfbody = block_f();
+            } else {
+                Expr tempexpr = expression_();
+                ReturnStmt tempbodyreturn = new ReturnStmt;
+                tempbodyreturn.init(arrowkey, tempexpr.copy(), true);
+                halfbody = tempbodyreturn;
+            }
+
+            array body;
+            for (Token param : inputs) (long i) { 
+                AssignExpr tassignexpr = new AssignExpr;
+                VariableExpr inputname = new VariableExpr;
+                AccessorExpr arraccessor = new AccessorExpr;
+                VariableExpr arrname = new VariableExpr;
+                Token arrnametoken = new Token;
+                Token fakeBracket = new Token;
+                LiteralExpr numberr = new LiteralExpr;
+                ExprStmt wraps = new ExprStmt;
+
+                arrnametoken.init(IDENTIFIER, "arr", "arr", arrowkey.m_line);
+                fakeBracket.init(LEFT_SQUARE, "[fake", "[fake", arrowkey.m_line);
+                numberr.init(i);
+                arrname.init(arrnametoken);
+                inputname.init(param);
+                arraccessor.init(arrname, fakeBracket, array(numberr), "access", false);
+                tassignexpr.init(inputname, arraccessor, false);
+
+                wraps.init(tassignexpr);
+                arad(body, wraps);
+            }
+
+            arad(body, halfbody);
+
+            ClassStmt functClass = new ClassStmt;
+            FunctionStmt fstmt = new FunctionStmt;
+
+		    fstmt.init(mkident("funct_run", arrowkey.m_line), mkident("variant", arrowkey.m_line));
+
+		    functClass.init(mkident(functname, arrowkey.m_line), array(fstmt), array(mkident("funct", arrowkey.m_line)), array());
+            arad(statements, functClass);
+
+            return myfunctExpr;
+        } else {
+            return expression_();
+        }
+    }
+
+    private Token mkident(string name, long linenum) {
+        Token t = new Token;
+        t.init(IDENTIFIER, name, name, linenum);
+        return t;
+    }
+
+    private DotExpr finishDot(Expr accessee) {
+        Expr rhs = call_();
+        DotExpr temp = new DotExpr;
+        temp.init(accessee, rhs);
+        return temp;
+    }
+
+    private Expr primary_() {
+        LiteralExpr temp = new LiteralExpr;
+        if (match(FALSE_)) {
+            temp.init(false);
+            return temp;
+        } else if (match(TRUE_)) {
+            temp.init(true);
+            return temp;
+        } else if (match(NULL_)) {
+            temp.init("null");
+            return temp;
+        } else if (match(NUMBER_, STRING_)) {
+            temp.init(previous().m_literal);
+            return temp;
+        } else if (match(LEFT_PAREN)) {
+            Expr expr_ = expression_();
+            consume(RIGHT_PAREN, "Expect ')' after expression.");
+            GroupingExpr tempp = new GroupingExpr;
+            tempp.init(expr_);
+            return tempp;
+        } else if (match(IDENTIFIER)) {
+            VariableExpr temppp = new VariableExpr;
+            temppp.init(previous());
+            return temppp;
+        }
+
+        err(peek(), "Unexpected Token");
+    }
+
+    private bool match(paramarray arr) {
+        for (tokentype typ : arr) (long i) {
+            if (check(ttyp)) {
+                advance();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private bool check(tokentype typ) {
+        if (isAtEnd()) {
+            return false;
+        }
+        return peek().m_type_ == typ;
+    }
+
+    private Token advance() {
+        if (!isAtEnd()) {
+            current = current + 1;
+        }
+        return previous();
+    }
+
+    private bool isAtEnd() {
+        return peek().m_type_ == EOF_;
+    }
+
+    private Token peek() {
+        return tokens[current];
+    }
+
+    private Token peeknext() {
+        if (current + 1 >= al(tokens)) {
+            return peek(); // guaranteed eof
+        }
+        return tokens[current + 1];
+    }
+
+    private Token peeknextnext() {
+        if (current + 2 >= al(tokens)) {
+            Token a = new Token;
+            a.init(EOF_, "", "", 999);
+            return peek(); // guaranteed eof
+        }
+        return tokens[current + 2];
+    }
+
+    private Token previous() {
+        return tokens[current - 1];
+    }
+
+    private Token consume(tokentype typ, string message) {
+        if (check(typ)) {
+            Token t = peek();
+            advance();
+            return t;
+        }
+        err(peek(), message);
+    }
+
+    private void err(Token tk, string message) {
+        m_h.err(tk, message);
+    }
 }

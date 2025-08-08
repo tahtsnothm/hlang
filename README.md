@@ -50,7 +50,8 @@ Limitations: must be able to work entirely in a locked down environment with exc
 ## TODO: 
 - bootstrap 
 -- done writing exprs
--- starting on parser , statement_f
+-- parser done
+
 - add inheritance (copy default implementations)
 - import c libraries (for text editor implementation)
 - variadic functions?
@@ -112,5 +113,13 @@ for (item : array) (String item) {
   for (i : array2) (i) {
     pt(item, i);
   }
+}
+
+func int add (paramarray numbers) {
+  long result = 0;
+  for (int number : numbers) (long i) {
+    result += number;
+  }
+  return result;
 }
 ```

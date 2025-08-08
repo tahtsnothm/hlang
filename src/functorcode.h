@@ -5,16 +5,16 @@
 
 
 
-class FunctorExpr < Expr {
+class functExpr < Expr {
 	public string name; // name created by line and counter maintained by the parser
 	public void Expr::init (paramarray arr) {
 		name = arr[0];
 	} 
 	public variant Expr::accept(ExprVisitor& visitor) {
-		return visitor.visitFunctorExpr(me);
+		return visitor.visitfunctExpr(me);
 	}
 	public variant Expr::copy() {
-		FunctorExpr temp = new FunctorExpr;
+		functExpr temp = new functExpr;
 		temp.Expr::init(name);
 		return temp;
 	}
@@ -24,7 +24,7 @@ class FunctorExpr < Expr {
 func void callArgument_f() {
 // try and parse an arrow function
 	if (match(LEFT_SQUARE)) {
-		FunctorExpr myfunctorExpr = new FunctorExpr;
+		functExpr myfunctExpr = new functExpr;
 		
 		array inputs;
 		arad(inputs, consume(IDENTIFIER, "Expected identifier"));
@@ -34,9 +34,9 @@ func void callArgument_f() {
 		consume(RIGHT_SQUARE, "Expected ']'");
 		Token arrowkey = consume (ARROW_, "Expected arrow for arrow sign");
 		
-		string functorname = "functl" & previous().m_line & "c" & functorcounter; // takes from the arrow sign
-		functorcounter++;
-		myfunctorExpr.Expr::init (functorname);
+		string functname = "functl" & previous().m_line & "c" & functcounter; // takes from the arrow sign
+		functcounter++;
+		myfunctExpr.Expr::init (functname);
 
 		Stmt halfbody;
 		if (match(LEFT_BRACE)) {
@@ -78,18 +78,18 @@ func void callArgument_f() {
 		arad(body, halfbody);
 
 		// generate the class
-		ClassStmt functorClass = new ClassStmt;
+		ClassStmt functClass = new ClassStmt;
 		FunctionStmt fstmt = new FunctionStmt;
 		fstmt.Stmt::init(mkident("funct_run", arrowkey.m_line), mkident("variant", arrowkey.m_line),
 		 array(mkident("arr", arrowkey.m_line)), array (mkident("paramarray", arrowkey.m_line)), array(false), body, "public" );
 		
-		functorClass.Stmt::init(mkident(functorname, arrowkey.m_line), array(fstmt), array(mkident("funct", arrowkey.m_line)), array());
+		functClass.Stmt::init(mkident(functname, arrowkey.m_line), array(fstmt), array(mkident("funct", arrowkey.m_line)), array());
 
 		
 		//blabalbal
-		arad(statements, functorClass);
+		arad(statements, functClass);
 
-		return myFunctorExpr;
+		return myfunctExpr;
 	} else {
 		return expression_();
 	}
@@ -104,31 +104,31 @@ private func Token mkident (string name, long linenum) {
 
 
 
-func variant ExprVisitor::visitFunctorExpr(FunctorExpr &expression) {
+func variant ExprVisitor::visitfunctExpr(functExpr &expression) {
 	write_forward_ ("dim m" & expression.name & " as new " & expression.name);
 	
 	return "m" & expression.name;
 }
 
-func variant map(variant &arr, funct &functor) {
+func variant map(variant &arr, funct &funct) {
 	array newarr;
 	for (variant item : arr) (int i) {
-		arad(newarr, functor.run(item));
+		arad(newarr, funct.run(item));
 	}
 	return newarr;
 }
 
-func variant filter(variant &arr, funct &functor) {
+func variant filter(variant &arr, funct &funct) {
 	array newarr;
 	for (variant item : arr) (int i) {
-		if (cbool(functor.run(item))) arad(newarr, item);
+		if (cbool(funct.run(item))) arad(newarr, item);
 	}
 	return newarr;
 }
-func variant reduce (variant &arr, funct &functor, variant base) {
+func variant reduce (variant &arr, funct &funct, variant base) {
 	// [item, accum] => accum
 	for (variant item : arr) (int i) {
-		base = functor.run(item, base);
+		base = funct.run(item, base);
 	}
 	return base;
 }

@@ -13,13 +13,13 @@ some environments only have excel.
 ## Features / Improvements over VBA
 - cleaner declaration syntax
 - Consistent block syntax
-- Shortcircuiting Logical operator (s)
+- Shortcircuiting Logical and (&&)
 - Upgraded VBA's foreach, now able to iterate over specific types instead of only```variant/object```
 - Added ```break``` and ```continue```
 - Removed need to add ```set``` when assigning objects
 - Ability to create multiple classes in one file!
 - Expression Statements
-- Limited functors for use with ```map```, ```filter``` and ```reduce``` (not 100% tested)
+- Limited lambdas for use with ```map```, ```filter``` and ```reduce``` (not 100% tested)
 - Slice operators for accessing array elements, slicing an array, and accessing excel values
 
 ## Development and Future Plans (not anytime soon)
@@ -27,7 +27,7 @@ Limitations: must be able to work entirely in a locked down environment with exc
 - optional function arguments
 - autobundle required functions
 - include other files
-- Create objects inplace: see ```functorcode.h```
+- Create objects inplace: 
 - Closures
 - Buffered Spreadsheet Read/Writes
 - Type Checking

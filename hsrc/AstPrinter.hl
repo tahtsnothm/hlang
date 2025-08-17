@@ -1,0 +1,167 @@
+class AstPrinter < ExprVisitor, StmtVisitor {
+  public void prt (variant statements) {
+    for (Stmt statement : statements) (long i) {
+      string s = cstr(statement.accept(me));
+      pt(s);
+    }
+  }
+
+  private string parenthesize(paramarray arr) {
+    string s = "(" & arr[0];
+    Expr expression;
+    for (long i = 1; i < al(arr); i++) {
+      expression = arr[i];
+      s = s + " ";
+      s = s + cstr(expression.accept(me));
+    }
+
+    s += ")";
+    return s;
+  }
+
+  private string parenthesizestatements(paramarray arr) {
+    string s = "(" + arr[0];
+    Stmt statement;
+    for (long i = 1; i < al(arr); i++) {
+      statement = arr[i];
+      s += " ";
+      s += cstr(statement.accept(me));
+    }
+    s += ")";
+    return s;
+  }
+  private string parenthesizelots(paramarray arr) {
+    string s = "(" + arr[0];
+
+    Stmt statement;
+    for (long i = 0; i < al(arr); i++) {
+      statement = arr[1][i];
+      s += cstr(statement.accept(me));
+      s += " ";
+    }
+    if (al(arr[1]) > 0) s = left(s, len(s) - 1);
+    s += ")";
+    return s;
+  }
+  private variant ExprVisitor::visitAssignExpr(AssignExpr expression) {
+    return "(assign " & expression.assignee.accept(me) & " " & expression.value.accept(me) & ")";
+  }
+
+
+  private variant ExprVisitor::visitBinaryExpr(BinaryExpr expression) {
+    return parenthesize(expression.operator.m_lexeme, expression.left, expression.right);
+  }
+
+
+  private variant ExprVisitor::visitCallExpr(CallExpr expression) {
+    string args = "";
+    for (Expr innerexpr : expression.arguments) (long i) {
+      args = args & innerexpr.accept(me) & ",";
+    }
+    if (al(expression.arguments) > 0) args = left(args, len(args) - 1);
+    return "(call " & expression.callee.accept(me) & "(" & args & "))";
+  }
+
+  private variant ExprVisitor::visitDotExpr(DotExpr expression) {
+    return expression.left.accept(me) & "." & expression.right.accept(me);
+  }
+
+  private variant ExprVisitor::visitGroupingExpr(GroupingExpr expression) {
+    return parenthesize("group", expression.expression);
+  }
+
+  private variant ExprVisitor::visitLiteralExpr(LiteralExpr expression) {
+    if (expression.value == null) {
+      return "null";
+    } else {
+      # dim rawquote as string : rawquote = """" #
+      if (typename(expression.value) == "String") {
+        return rawquote & expression.value & rawquote;
+      } else {
+        return expression.value;
+      }
+    }
+  }
+
+  private variant ExprVisitor::visitLogicalExpr(LogicalExpr expression) {
+    return parenthesize(expression.operator.m_lexeme, expression.left, expression.right);
+  }
+  private variant ExprVisitor::visitUnaryExpr(UnaryExpr expression) {
+    return parenthesize(expression.operator.m_lexeme, expression.right);
+  }
+
+  private variant ExprVisitor::visitVariableExpr(VariableExpr expression) {
+    return expression.name.m_lexeme;
+  }
+  private variant ExprVisitor::visitAccessorExpr(AccessorExpr expression) {
+    string args = "";
+    for (Expr innerexpr : expression.arguments) (long i) {
+      args = args & innerexpr.accept(me) & ",";
+    }
+    if (al(expression.arguments) > 0) args = left(args, len (args) -1);
+
+    return "(" & expression.accessee.accept(me) & "[" & args & "])";
+  }
+  private variant ExprVisitor::visitFunctExpr(FunctExpr expression) {
+    return "lambda";
+  }
+    private variant StmtVisitor::visitVarStmt(VarStmt statement) {
+      VariableExpr varex = new VariableExpr;
+      varex.init(statement.name);
+
+      if (statement.hasinitializer) {
+        return parenthesize("set", varex, statement.initializer);
+      } else {
+        return parenthesize("set", varex);
+      }
+    }
+    private variant StmtVisitor::visitExprStmt(ExprStmt statement) {
+      return statement.expression.accept(me);
+    }
+    private variant StmtVisitor::visitPrintStmt(PrintStmt statement) {
+      return parenthesize("print", statement.expression);
+    }
+    private variant StmtVisitor::visitBlockStmt(BlockStmt statement) {
+      return parenthesizelots("block", statement.statements);
+    }
+    private variant StmtVisitor::visitIfStmt(IfStmt statement) {
+      if (statement.hasElse) {
+        return "(if " & cstr(statement.condition.accept(me)) & " " & cstr(statement.thenBranch.accept(me)) & Cstr(statement.elseBranch.accept(me)) & ")";
+      } else {
+        string cs = cstr(statement.condition.accept(me));
+        string bs = cstr(statement.thenBranch.accept(me));
+
+        return "(if " &  cs & " " & bs & ")";
+      }
+    }
+    private variant StmtVisitor::visitWhileStmt(WhileStmt statement) {
+      return "(while " & statement.condition.accept(me) & statement.body.accept(me) & ")";
+    }
+    private variant StmtVisitor::visitFunctionStmt(FunctionStmt statement) {
+      string args = "";
+      for (long i = 0; i < al(statement.params); i++) {
+        Token innerexpr = statement.params[i];
+        Token innertoken = statement.paramtypes[i];
+        args = args & innertoken.m_lexeme & " " & innerexpr.m_lexeme & ","; 
+      }
+      if (al(statement.params) > 0 ) args = left(args, len(args) - 1);
+    }
+    private variant StmtVisitor::visitClassStmt(ClassStmt statement) {
+      return "class" & statement.name.m_lexeme;
+    }
+    private variant StmtVisitor::visitCodeStmt(CodeStmt statement) {
+      return statement.code;
+    }
+    private variant StmtVisitor::visitReturnStmt(ReturnStmt statement) {
+      return "return";
+    }
+    private variant StmtVisitor::visitForEachStmt(ForEachStmt statement) {
+      return "(foreach" & statement.iterable.accept(me) & statement.body.accept(me) & ")";
+    }
+    private variant StmtVisitor::visitControlStmt(ControlStmt statement) {
+      return statement.keyword.m_lexeme;
+    }
+    private variant StmtVisitor::visitEnumStmt(EnumStmt statement) {
+      return "enum " & statement.name.m_lexeme;
+    }
+}

@@ -1,0 +1,77 @@
+Attribute VB_Name = "TokenTypeFile"
+Enum tokentype
+    LEFT_PAREN
+    RIGHT_PAREN
+    LEFT_BRACE
+    RIGHT_BRACE
+    LEFT_SQUARE
+    RIGHT_SQUARE
+    
+    COMMA
+    COLON
+    DOT
+    MINUS
+    PLUS
+    SEMICOLON
+    SLASH
+    STAR
+    AMPERSAND
+    HASHTAG
+    MOD_
+    ARROW_
+    
+    PLUS_PLUS
+    MINUS_MINUS
+    
+    PLUS_EQUAL
+    MINUS_EQUAL
+    SLASH_EQUAL
+    STAR_EQUAL
+    BANG
+    BANG_EQUAL
+    EQUAL
+    EQUAL_EQUAL
+    GREATER
+    GREATER_EQUAL
+    LESS
+    LESS_EQUAL
+    
+    IDENTIFIER
+    STRING_
+    NUMBER_
+    VARTYPE_
+    RAW_
+    
+    AND_
+    CLASS_
+    ELSE_
+    FALSE_
+    FUNC_
+    FOR_
+    IF_
+    NULL_
+    OR_
+    PRINT_
+    RETURN_
+    SUPER_
+    THIS_
+    TRUE_
+    VAR_
+    WHILE_
+    NEW_
+    PUBLIC_
+    PRIVATE_
+    STATIC_
+    BREAK_
+    CONTINUE_
+    ENUM_
+    
+    BRANCHING_AND_
+    
+    EOF_
+    
+
+End Enum
+'no support for numbers with decimals
+
+

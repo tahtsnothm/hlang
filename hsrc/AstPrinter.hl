@@ -145,6 +145,8 @@ class AstPrinter < ExprVisitor, StmtVisitor {
         args = args & innertoken.m_lexeme & " " & innerexpr.m_lexeme & ","; 
       }
       if (al(statement.params) > 0 ) args = left(args, len(args) - 1);
+      return "(fun " & statement.name.m_lexeme & "(" & args & ")" & parenthesizelots("body", statement.body) & ")";
+
     }
     private variant StmtVisitor::visitClassStmt(ClassStmt statement) {
       return "class" & statement.name.m_lexeme;

@@ -1,4 +1,12 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
 Attribute VB_Name = "Scanner"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = False
+Attribute VB_Exposed = False
 private m_source as string
 private m_tokens() as variant
 private m_start as long
@@ -6,7 +14,7 @@ private m_current as long
 private m_line as long
 private m_h as H
 private m_keywords as Dictionary
-public function init(byval source as string, byval h_instance as H) 
+public function init(byval source as string, byref h_instance as H) 
     nt st (m_source, preprocess(source))
     nt st (m_tokens, array())
     nt st (m_start, 0)
@@ -177,15 +185,7 @@ private function scanToken()
                                                                                 else
                                                                                     if (c = "/") then 
                                                                                         if (match("/")) then 
-private function funcl115c0() as Boolean
-    funcl115c0 = false
-    if (peek() <> vblf) then
-        if (not isAtEnd()) then
-            funcl115c0 = true
-        endif
-    endif
-end function
-                                                                                            while (funcl115c0())
+                                                                                            while (peek() <> vblf and not isAtEnd())
                                                                                                 call advance()
                                                                                                 looplabel1bef:
                                                                                                 nt 1
@@ -303,15 +303,7 @@ end function
 
 
 private function raw_code_f() 
-private function funcl174c1() as Boolean
-    funcl174c1 = false
-    if (peek() <> "#") then
-        if (not isAtEnd()) then
-            funcl174c1 = true
-        endif
-    endif
-end function
-    while (funcl174c1())
+    while (peek() <> "#" and not isAtEnd())
         if (peek() = vblf) then 
             nt st (m_line, m_line + 1)
         endif
@@ -332,15 +324,7 @@ end function
 
 private function string_f() 
      dim rawquote as string : rawquote = """" 
-private function funcl189c2() as Boolean
-    funcl189c2 = false
-    if (peek() <> rawquote) then
-        if (not isAtEnd()) then
-            funcl189c2 = true
-        endif
-    endif
-end function
-    while (funcl189c2())
+    while (peek() <> rawquote and not isAtEnd())
         if (peek() = vblf) then 
             nt st (m_line, m_line + 1)
         endif
@@ -364,15 +348,7 @@ private function blockcomment_f()
         if (peek() = vblf) then 
             nt st (m_line, m_line + 1)
         endif
-private function funcl205c3() as Boolean
-    funcl205c3 = false
-    if (peek() = "*") then
-        if (peeknext() = "/") then
-            funcl205c3 = true
-        endif
-    endif
-end function
-        if (funcl205c3()) then 
+        if (peek() = "*" and peeknext() = "/") then 
             call advance()
             call advance()
             goto looplabel4aft:
@@ -395,15 +371,7 @@ private function number_f()
         nt 1
     wend
     looplabel5aft:
-private function funcl216c4() as Boolean
-    funcl216c4 = false
-    if (peek() = ".") then
-        if (isDigit(peeknext())) then
-            funcl216c4 = true
-        endif
-    endif
-end function
-    if (funcl216c4()) then 
+    if (peek() = "." and isDigit(peeknext())) then 
         call advance()
         while (isDigit(peek()))
             call advance()
@@ -426,7 +394,7 @@ private function identifier_f()
     looplabel7aft:
     dim  s as string: st s, substring(m_source, m_start, m_current)
     dim  type_ as tokentype
-    if (m_keywords.containsKey(s)) then 
+    if (m_keywords.exists(s)) then 
         nt st (type_, m_keywords(s))
     else
         nt st (type_, IDENTIFIER)

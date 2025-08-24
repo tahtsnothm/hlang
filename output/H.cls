@@ -1,4 +1,12 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
 Attribute VB_Name = "H"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = False
+Attribute VB_Exposed = False
 private hadError as boolean
 public function init() 
     nt st (hadError, False)
@@ -22,15 +30,13 @@ public function compile(byval filepath as string)
         call runFile(filepath)
     else
         if (fso.FolderExists(filepath)) then 
-            dim  file as variant: st file, dir(filepath + "\*.*")
-            dim  nextfile as variant
-            while (file <> "")
-                nt st (nextfile, dir)
-                call runFile(filepath + "\" + file)
-                nt st (file, nextfile)
+            dim  file as file
+            dim  i as long
+            for i = 0 to al(fso.getfolder(filepath).files) - 1
+                st file, fso.getfolder(filepath).files(i)
+                call runFile(file.path)
                 looplabel0bef:
-                nt 1
-            wend
+            next i
             looplabel0aft:
         else
         endif

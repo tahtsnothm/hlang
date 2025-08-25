@@ -1,4 +1,8 @@
 class AstPrinter < ExprVisitor, StmtVisitor {
+  public void init() {
+    // blank for future
+    return;
+  }
   public void prt (variant statements) {
     for (Stmt statement : statements) (long i) {
       string s = cstr(statement.accept(me));

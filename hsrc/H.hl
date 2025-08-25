@@ -69,10 +69,11 @@ class H {
         }
 
         AstPrinter astp = new AstPrinter;
+        astp.init();
         astp.prt(statements);
 
         CodeGenerator gen = new CodeGenerator;
-        
+        gen.init();        
         gen.generate (statements,filename);
         return;
     }

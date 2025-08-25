@@ -51,12 +51,16 @@ Limitations: must be able to work entirely in a locked down environment with exc
 - bootstrap 
 -- done writing exprs
 -- parser done
+-- (reexport)
 
+- support for `\n`
+- support for subs
 - add inheritance (copy default implementations)
 - import c libraries (for text editor implementation)
 - variadic functions?
 - class initialise too
 - empty main files (used for classes only) will not make new files
+- enums have to be declared at the top level
 
 ## Use
 ```hcc <filename>``` in vba immediate window

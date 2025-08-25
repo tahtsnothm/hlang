@@ -1,0 +1,227 @@
+class CodeGenerator < ExprVisitor, StmtVisitor{
+  public string output_file_path;
+
+  public Scripting.Dictionary functionsdict
+  public long indentlevel;
+  public string indenttype;
+  public variant ilevels; 
+  public variant scopes;
+
+  public variant loopscopes;
+  public variant loopcounter;
+  public long fcounter;
+
+  public string current_function_name;
+  private Object f; //file
+  
+  private long main_statements; 
+
+  public void init() {
+    output_file_path = ThisWorkbook.Path + "\out.bas";  
+    indent_level = 0;
+    current_function_name = "main";
+
+    functionsdict = new Scripting.Dictionary;
+    loopscopes = array();
+    loopcounter = 0; 
+
+    ilevels = array(0);
+    scopes = array ("main"); // stack of functions
+
+    indenttype = "    ";
+
+    fcounter = 0;
+  }
+
+  public void setOutput(string filename) {
+    output_file_path = filename;
+  }
+
+  
+  public void generate(variant statements) {
+    FileSystemObject fso = new FileSystemObject;
+    f = fso.createTextFile(output_file_path);
+
+    write_("public sub main()");
+    indent();
+ 
+
+    main_statements = 0; 
+    // counts non class statements(if we have 0 then)
+
+
+    for (Stmt statement : statements) (long i) {
+      statement.accept(me);
+    }
+
+    unindent();
+
+    write_("end sub");
+
+    for (i = 0; i < al(functionsdict.items); i++) {
+      write_(functionsdict[functionsdict.keys()[i]]);
+    }
+
+    #f.close#
+
+    if (main_statements == 0) {
+      // delete main file 
+
+    }
+     
+  }
+
+
+  private void indent() {
+    indentLevel++;
+  }
+
+  private void unindent() {
+    indentLevel--;
+    if (indentLevel < 0) indentLevel = 0;
+  }
+
+  private void pushscope(fname) {
+    arad(ilevels, indentLevel);
+    arad(scopes, current_function_name);
+
+    functionsdict[fname] = "";
+    indentLevel = 0;
+  }
+
+  private void popscope() {
+    indentLevel = ilevels[al(ilevels) - 1];
+    pop(ilevels, al(ilevels) - 1);
+    current_function_name = scopes[al(scopes) - 1];
+    pop(scopes, al(scopes) - 1);
+  }
+
+  private void trackstmts() {
+    // put to the top of nonclass / nonenum statements
+
+    if (current_function_name == "main") main_statements++;
+  }
+  private void write_ (string s) {
+    for (long i = 0; i < indentLevel; i++) {
+      s = indentType & s;
+    }
+
+    if (current_function_name == "main" ) {
+      #f.writeLine s#
+    } else {
+      functionsdict[current_function_name] = functionsdict[current_function_name] & vbLf & s;
+      functions = functions & vbLf & s;
+    }
+  }
+
+  private string ctyp(string s) {
+    if (s == "int") {
+      return "integer";
+    } else if (s == "bool") {
+      return "boolean";
+    } else if (s == "array" or s == "void") {
+      return "variant"
+    }
+    return s;
+  }
+  
+  private variant ExprVisitor::visitAssignExpr(AssignExpr expression) {
+    string a = "";
+    if (expression.addnew) a = "new ";
+
+    return "st (" & cstr(expression.assignee.accept(me)) & ", " & aa & expression.value.accept(me) & ")";
+  }
+
+  private variant ExprVisitor::visitBinaryExpr(BinaryExpr expression) {
+    if (expression.operator.m_lexeme == "==") ) expression.operator.m_lexeme = "=";
+    if (expression.operator.m_lexeme == "!=") ) expression.operator.m_lexeme = "<>";
+    if (expression.operator.m_lexeme == "%") ) expression.operator.m_lexeme = "mod";
+    return expression.left.accept(Me) & " " & expression.operator.m_lexeme & " " & expression.right.accept(Me);
+  }
+
+  private variant ExprVisitor::visitUnaryExpr(UnaryExpr expression) {
+    if (expression.operator.m_lexeme = "!") {
+        return "not " & expression.right.accept(Me);
+    } else if (expression.operator.m_lexeme = "-") {
+        return "-" & expression.right.accept(Me);
+    } 
+  }
+
+  private variant ExprVisitor::visitLiteralExpr(LiteralExpr expression) {
+    #dim rawquote as string : rawquote = """"#
+    if (expression.value = null) {
+        return "null"
+    } else {
+        If (typeName(expression.value) = "String") {
+          return  rawquote & expression.value & rawquote;
+        } else {
+          return expression.value;
+        }
+    }
+  }
+  private variant ExprVisitor::visitGroupingExpr(GroupingExpr expression) {
+
+    return "(" & expression.expression.copy().Expr_accept(Me) & ")";
+  }
+  private variant ExprVisitor::visitVariableExpr(VariableExpr expression) {
+    return expression.name.m_lexeme
+  }
+  private variant ExprVisitor::visitLogicalExpr(LogicalExpr expression) {
+    string left = expression.left.accept(me);
+    string right = expression.right.accept(me);
+
+    fcounter++;
+    pushscope(fname);
+
+    write_("private function " & fname & "()" & " as Boolean");
+
+    indent();
+      write_(fname & " = false");
+      write_("if (" & left & ") then");
+      indent();
+        write_("if (" & right & ") then");
+        indent();
+          write_(fname & " = true");
+        unindent();
+        write_("endif");
+      unindent();
+      write_("endif");
+    unindent();
+    write_("end function");
+    popscope();
+    return fname & "()";
+  }
+  private variant ExprVisitor::visitCallExpr(CallExpr expression) {
+    string args = "";
+    for (Expr exp : expression.arguments) (long i) {
+      args = args &= exp.accept(me) & ", ";
+    }
+
+    if (al(expression.arguments) > 0) args = left(args, len(args) - 2);
+
+    return expression.callee.accept(me) & "(" & args & )"
+  }
+  private variant ExprVisitor::visitDotExpr(DotExpr expression) {
+    return expression.left.accept(Me) & "." & expression.right.accept(Me);
+  }
+  private variant ExprVisitor::visitAccessorExpr(AccessorExpr expression) {}
+  private variant ExprVisitor::visitFunctExpr(FunctExpr expression) {}
+
+  private variant StmtVisitor::visitVarStmt(VarStmt statement) {}    
+  private variant StmtVisitor::visitExprStmt(ExprStmt statement) {}    
+  private variant StmtVisitor::visitPrintStmt(PrintStmt statement) {}    
+  private variant StmtVisitor::visitBlockStmt(BlockStmt statement) {
+    for (Stmt smt : statement.statements) (long i ) {
+          smt.accept(me); 
+    }
+  }
+  private variant StmtVisitor::visitIfStmt(IfStmt statement) {}    
+  private variant StmtVisitor::visitWhileStmt(WhileStmt statement) {}    
+  private variant StmtVisitor::visitFunctionStmt(FunctionStmt statement) {}    
+  private variant StmtVisitor::visitClassStmt(ClassStmt statement) {}    
+  private variant StmtVisitor::visitCodeStmt(CodeStmt statement) {}    
+  private variant StmtVisitor::visitReturnStmt(ReturnStmt statement) {}    
+  private variant StmtVisitor::visitForEachStmt(ForEachStmt statement) {}    
+  private variant StmtVisitor::visitControlStmt(ControlStmt statement) {}    
+  private variant StmtVisitor::visitEnumStmt(EnumStmt statement) {}    
+}

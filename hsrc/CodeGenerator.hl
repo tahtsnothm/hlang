@@ -167,10 +167,10 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
       return;
     }
     if (current_function_name == "main" ) {
-      mainfile = mainfile & vblf & s;
+      mainfile = s & vblf & mainfile ;
     } else {
-      functionsdict[current_function_name] = functionsdict[current_function_name] & vbLf & s;
-      functions = functions & vbLf & s;
+      functionsdict[current_function_name] = s & vblf & functionsdict[current_function_name] ;
+      functions = s & vblf & functions;
     }
 
   }

@@ -169,8 +169,8 @@ Private Function write_forward_(s As String)
     If current_function_name = "main" Then
         mainfile = s & vbLf & mainfile
     Else
-        functionsdict(current_function_name) = functionsdict(current_function_name) & vbLf & s
-        functions = functions & vbLf & s
+        functionsdict(current_function_name) = s & vblf functionsdict(current_function_name) 
+        functions = s & vblf & functions  ' changed order, not sure if break'
     End If
     
 End Function

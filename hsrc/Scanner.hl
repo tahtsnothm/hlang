@@ -206,7 +206,7 @@ class Scanner {
 
     private void string_f() {
         # dim rawquote as string : rawquote = """" #
-        while (peek() != rawquote and !isAtEnd()) {
+        while (!(peek() == rawquote and substring(m_source, m_current - 1, m_current) )and !isAtEnd()) {
             if (peek() == vblf) m_line = m_line + 1;
             advance();
         }

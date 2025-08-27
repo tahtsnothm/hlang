@@ -52,9 +52,8 @@ Limitations: must be able to work entirely in a locked down environment with exc
 -- done writing exprs
 -- parser done
 -- (reexport)
+-- support for `\n`
 
-
-- support for `\n`
 - support for subs
 - add inheritance (copy default implementations)
 - import c libraries (for text editor implementation)

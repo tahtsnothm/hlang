@@ -34,6 +34,7 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
     loopscopes = array();
     loopcounter = 0; 
     currentClass = "";
+    main_statements = 0;
 
 
     classes = new scripting.Dictionary;
@@ -54,8 +55,9 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
   
   public void generate(variant statements, string filename) {
     FileSystemObject fso = new FileSystemObject;
+    string filename = output_file_path & "\" & filename & ".bas";
     f = fso.createTextFile(output_file_path & "\" & filename & ".bas");
-    #dim rawquote as string : rawquote = """"# 
+    # dim rawquote as string : rawquote = """" # 
     write_("Attribute VB_Name = " & rawquote & filename & rawquote);
     write_("public sub main()");
     indent();
@@ -95,11 +97,11 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
       # sf.close #
     }
    
-    #f.close#
+    # f.close #
 
     if (main_statements == 0) {
       // delete main file 
-
+      # fso.deletefile filename #
     }
      
   }
@@ -226,14 +228,19 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
         return "-" & expression.right.accept(Me);
     } 
   }
-
+  private void processEscapeChars(string s) {
+    # dim rawquote as string : rawquote = """" #
+    s = replace(s, "\n", vblf);
+    # s = replace(s, "\""", rawquote) #
+    return s;
+  }
   private variant ExprVisitor::visitLiteralExpr(LiteralExpr expression) {
-    #dim rawquote as string : rawquote = """"#
+    # dim rawquote as string : rawquote = """" #
     if (expression.value = null) {
         return "null"
     } else {
         If (typeName(expression.value) = "String") {
-          return  rawquote & expression.value & rawquote;
+          return rawquote & processEscapeChars(expression.value) & rawquote;
         } else {
           return expression.value;
         }
@@ -309,6 +316,8 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
   }
 
   private variant StmtVisitor::visitVarStmt(VarStmt statement) {
+
+    main_statements++;
     string s; 
     string visa = "dim ";
     if (statement.hasarrcount) {
@@ -329,6 +338,7 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
     write_(s);
   }
   private variant StmtVisitor::visitExprStmt(ExprStmt statement) {
+    main_statements++;
     if (typename(statement.expression) == "CallExpr") {
       write_("call " & statement.expression.accept(me) );
     } else {
@@ -336,14 +346,17 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
     }
   }
   private variant StmtVisitor::visitPrintStmt(PrintStmt statement) {
+    main_statements++;
     write_("pt " & statement.expression.accept(me));
   }
   private variant StmtVisitor::visitBlockStmt(BlockStmt statement) {
+    main_statements++;
     for (Stmt smt : statement.statements) (long i ) {
           smt.accept(me); 
     }
   }
   private variant StmtVisitor::visitIfStmt(IfStmt statement) {
+    main_statements++;
     write_("if (" & statement.condition.accept(me) & ") then");
     indent();
     statement.thenBranch.accept(me);
@@ -357,6 +370,7 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
     write_("endif");
   }
   private variant StmtVisitor::visitWhileStmt(WhileStmt statement) {
+    main_statements++;
       arad(loopscopes, loopcounter); 
       loopcounter++;
       
@@ -372,6 +386,7 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
     pop(loopscopes, al(loopscopes) - 1);
   }
   private variant StmtVisitor::visitFunctionStmt(FunctionStmt statement) {
+    main_statements++;
     pushscope(statement.name.m_lexeme);
     stirng args = "";
     for (long i = 0; i < al(statement.params); i++) {
@@ -445,9 +460,11 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
   }
 
   private variant StmtVisitor::visitCodeStmt(CodeStmt statement) {
+    main_statements++;
     write_(statement.code);
   }
   private variant StmtVisitor::visitReturnStmt(ReturnStmt statement) {
+    main_statements++;
     if (current_function_name == "") {
       pt("Error : line", statement.keyword.m_line, " cannot return");
     } else {
@@ -458,6 +475,7 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
     }
   }
   private variant StmtVisitor::visitForEachStmt(ForEachStmt statement) {
+    main_statements++;
     arad(loopscopes, loopcounter);
     loopcounter++;
     if (statement.hasDeclarator) {
@@ -483,6 +501,7 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
   }
 
   private variant StmtVisitor::visitControlStmt(ControlStmt statement) {
+    main_statements++;
     if (statement.keyword.m_type_ == BREAK_) {
       write_ ("goto looplabel" & loopscopes[al(loopscopes) - 1] & "aft:"); 
     } else if (statement.keyword.m_type_ == CONTINUE_) {
@@ -490,6 +509,7 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
     }
   }
   private variant StmtVisitor::visitEnumStmt(EnumStmt statement) {
+    main_statements++;
     pushscope(statement.name.m_lexeme);
     write_("enum " & statement.name.m_lexeme);
     string s = "";

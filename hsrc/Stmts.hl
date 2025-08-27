@@ -1,7 +1,5 @@
 class Stmt {
-    public variant accept(StmtVisitor visitor) {
-
-    }
+    public variant accept(StmtVisitor visitor) {}
 }
 
 class StmtVisitor {

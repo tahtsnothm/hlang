@@ -92,7 +92,7 @@ class Parser {
                 arad(properties, varDeclaration_f(vis));
             }
         }
-        consume(RIGHT_BRACE, "Expected '{' after class body");
+        consume(RIGHT_BRACE, "Expected '}' after class body");
 
         ClassStmt temp = new ClassStmt;
         temp.init(name, methods, supercs, properties);

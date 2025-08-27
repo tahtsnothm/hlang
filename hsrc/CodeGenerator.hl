@@ -1,5 +1,6 @@
 class CodeGenerator < ExprVisitor, StmtVisitor{
   public string output_file_path;
+   
 
   public Scripting.Dictionary functionsdict
   public long indentlevel;
@@ -11,20 +12,33 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
   public variant loopcounter;
   public long fcounter;
 
+  public Scripting.Dictionary classes;
+  public bool inClass; 
+  public variant stdFunctionsUsed; 
+  public string currentClass;
+
+
   public string current_function_name;
   private Object f; //file
+
   
   private long main_statements; 
 
   public void init() {
-    output_file_path = ThisWorkbook.Path + "\out.bas";  
+    output_file_path = ThisWorkbook.Path + "\output";  
     indent_level = 0;
     current_function_name = "main";
 
     functionsdict = new Scripting.Dictionary;
+    stdFunctionsUsed = array();
     loopscopes = array();
     loopcounter = 0; 
+    currentClass = "";
 
+
+    classes = new scripting.Dictionary;
+    inClass = false;
+    mainfile = "";
     ilevels = array(0);
     scopes = array ("main"); // stack of functions
 
@@ -38,10 +52,11 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
   }
 
   
-  public void generate(variant statements) {
+  public void generate(variant statements, string filename) {
     FileSystemObject fso = new FileSystemObject;
-    f = fso.createTextFile(output_file_path);
-
+    f = fso.createTextFile(output_file_path & "\" & filename & ".bas");
+    #dim rawquote as string : rawquote = """"# 
+    write_("Attribute VB_Name = " & rawquote & filename & rawquote);
     write_("public sub main()");
     indent();
  
@@ -62,6 +77,24 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
       write_(functionsdict[functionsdict.keys()[i]]);
     }
 
+    finalise();
+    
+    for (i = 0; i < al(classes.items); i++) (i) {
+      object sf = fso.CreateTextFile(output_file_path & "\" & classes.keys()[i] & ".cls");
+      sf.WriteLine ("VERSION 1.0 CLASS");
+      sf.WriteLine ("BEGIN");
+      sf.WriteLine ("  MultiUse = -1  'True");
+      sf.WriteLine ("END");
+      sf.WriteLine ("Attribute VB_Name = " & rawquote & classes.Keys()[i] & rawquote);
+      sf.WriteLine ("Attribute VB_GlobalNameSpace = False");
+      sf.WriteLine ("Attribute VB_Creatable = False");
+      sf.WriteLine ("Attribute VB_PredeclaredId = False");
+      sf.WriteLine ("Attribute VB_Exposed = False");
+
+      sf.WriteLine (classes[classes.keys()[i]]);
+      # sf.close #
+    }
+   
     #f.close#
 
     if (main_statements == 0) {
@@ -106,14 +139,54 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
       s = indentType & s;
     }
 
+    if (inClass) {
+      classes[currentClass] = classes[currentClass] & s & vbLf;
+      return;
+    }
+
     if (current_function_name == "main" ) {
-      #f.writeLine s#
+      mainfile = mainfile & vblf & s;
     } else {
       functionsdict[current_function_name] = functionsdict[current_function_name] & vbLf & s;
       functions = functions & vbLf & s;
     }
   }
 
+
+  private void write_forward_(string s) {
+    // already changed write to be write-forward by default
+    
+    for (long i = 0; i < indentLevel; i++) {
+      s = indentType & s;
+    }
+
+    if (inClass ) {
+      classes[currentClass] = s & vblf & classes[currentClass];
+      return;
+    }
+    if (current_function_name == "main" ) {
+      mainfile = mainfile & vblf & s;
+    } else {
+      functionsdict[current_function_name] = functionsdict[current_function_name] & vbLf & s;
+      functions = functions & vbLf & s;
+    }
+
+  }
+
+
+  private void finalise() {
+    f.writeline (replace(mainfile, vblf, vbcrlf));
+  }
+
+  private function registerFunctionDependency(string name) {
+    if (!arrcontains(stdFunctionsUsed, name)) {
+      arad(stdFunctionsUsed, name);
+    }
+  }
+
+  private Expr exprcast(variant item) {
+    return item; // cast
+  }
   private string ctyp(string s) {
     if (s == "int") {
       return "integer";
@@ -126,9 +199,16 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
   }
   
   private variant ExprVisitor::visitAssignExpr(AssignExpr expression) {
-    string a = "";
-    if (expression.addnew) a = "new ";
+    string aa = "";
+    if (expression.addnew) aa = "new ";
 
+    if (typename (expression.assignee) == "AccessorExpr") {
+      AccessorExpr a = new AccessorExpr;
+      a = expression.assignee.copy();
+      a.islvalue = true;
+      return "st (" & CStr(a.Expr_accept(Me)) & ", " & aa & expression.value.accept(Me) & ")";
+    }
+  
     return "st (" & cstr(expression.assignee.accept(me)) & ", " & aa & expression.value.accept(me) & ")";
   }
 
@@ -204,24 +284,225 @@ class CodeGenerator < ExprVisitor, StmtVisitor{
   private variant ExprVisitor::visitDotExpr(DotExpr expression) {
     return expression.left.accept(Me) & "." & expression.right.accept(Me);
   }
-  private variant ExprVisitor::visitAccessorExpr(AccessorExpr expression) {}
-  private variant ExprVisitor::visitFunctExpr(FunctExpr expression) {}
+  private variant ExprVisitor::visitAccessorExpr(AccessorExpr expression) {
+    if (expression.valmode == "access") {
+      if (expression.islvalue) {
+        if (al(expression.arguments) == 0) {
+          return expression.accessee.accept(me) & "(" & ")"; 
+        } else { 
+          return expression.accessee.accept(me) & "(" & exprcast(expression.arguments[0]).accept(me) & ")"; 
+        }
+      }
+    } else if (expression.valmode == "slice") {
+      registerFunctionDependency("h_slice");
+      return "h_slice(" & expression.accessee.accept(Me) & "," 
+      & exprcast(expression.arguments[0]).accept(Me) & "," 
+      & exprcast(expression.arguments[1]).accept(Me) & "," 
+      & exprcast(expression.arguments[2]).accept(Me) & ")";
+    } else if (expression.valMode = "val") {
+      return expression.accessee.accept(Me) & ".rows(" & exprcast(expression.arguments[0].accept(Me) & ").cells(" & exprcast(expression.arguments[1].accept(Me) & ").value";
+    }
+  }
+  private variant ExprVisitor::visitFunctExpr(FunctExpr expression) {
+    write_forward_("dim m" & expression.name & " as new " & expression.name);
+    return "m" & expression.name;
+  }
 
-  private variant StmtVisitor::visitVarStmt(VarStmt statement) {}    
-  private variant StmtVisitor::visitExprStmt(ExprStmt statement) {}    
-  private variant StmtVisitor::visitPrintStmt(PrintStmt statement) {}    
+  private variant StmtVisitor::visitVarStmt(VarStmt statement) {
+    string s; 
+    string visa = "dim ";
+    if (statement.hasarrcount) {
+        statement.name.m_lexeme = statement.name.m_lexeme & "(0 to " & statement.arrcount.accept(Me) & " - 1)";
+    }
+
+    if (statement.type_.m_lexeme == "array") {
+        s = visa & " " & statement.name.m_lexeme & "() as " & ctyp(statement.type_.m_lexeme);
+    } else {
+        s = visa & " " & statement.name.m_lexeme & " as " & ctyp(statement.type_.m_lexeme);
+    }
+    string addnew = "";
+    if (statement.hasinitializer) {
+      if (statement.addnew) aaaa = "new ";
+        s = s & ": st " & statement.name.m_lexeme & ", " & aaaa & statement.initializer.accept(Me);
+    }
+
+    write_(s);
+  }
+  private variant StmtVisitor::visitExprStmt(ExprStmt statement) {
+    if (typename(statement.expression) == "CallExpr") {
+      write_("call " & statement.expression.accept(me) );
+    } else {
+      write_("nt " & statement.expression.accept(me));
+    }
+  }
+  private variant StmtVisitor::visitPrintStmt(PrintStmt statement) {
+    write_("pt " & statement.expression.accept(me));
+  }
   private variant StmtVisitor::visitBlockStmt(BlockStmt statement) {
     for (Stmt smt : statement.statements) (long i ) {
           smt.accept(me); 
     }
   }
-  private variant StmtVisitor::visitIfStmt(IfStmt statement) {}    
-  private variant StmtVisitor::visitWhileStmt(WhileStmt statement) {}    
-  private variant StmtVisitor::visitFunctionStmt(FunctionStmt statement) {}    
-  private variant StmtVisitor::visitClassStmt(ClassStmt statement) {}    
-  private variant StmtVisitor::visitCodeStmt(CodeStmt statement) {}    
-  private variant StmtVisitor::visitReturnStmt(ReturnStmt statement) {}    
-  private variant StmtVisitor::visitForEachStmt(ForEachStmt statement) {}    
-  private variant StmtVisitor::visitControlStmt(ControlStmt statement) {}    
-  private variant StmtVisitor::visitEnumStmt(EnumStmt statement) {}    
+  private variant StmtVisitor::visitIfStmt(IfStmt statement) {
+    write_("if (" & statement.condition.accept(me) & ") then");
+    indent();
+    statement.thenBranch.accept(me);
+    unindent();
+    if(statement.hasElse) {
+      write_ ("else");
+      indent();
+      statement.elseBranch.accept(me);
+      unindent();
+    }
+    write_("endif");
+  }
+  private variant StmtVisitor::visitWhileStmt(WhileStmt statement) {
+      arad(loopscopes, loopcounter); 
+      loopcounter++;
+      
+    write_ ("while (" & statement.condition.accept(Me) & ")");
+    indent();
+    statement.body.accept (Me);
+    write_ ("looplabel" & loopscopes(al(loopscopes) - 1) & "bef:");
+    statement.itx.accept (Me);
+    unindent();
+    write_ ("wend");
+    write_ ("looplabel" & loopscopes(al(loopscopes) - 1) & "aft:");
+    
+    pop(loopscopes, al(loopscopes) - 1);
+  }
+  private variant StmtVisitor::visitFunctionStmt(FunctionStmt statement) {
+    pushscope(statement.name.m_lexeme);
+    stirng args = "";
+    for (long i = 0; i < al(statement.params); i++) {
+      string bywhat;
+      if (statement.parammethod[i]) {
+        bywhat = "byref";
+      } else {
+        bywhat = "byval";
+      }
+
+      Token pname = statement.params[i];
+      Token ptype = statement.paramtypes[i]; 
+      string paramname = statement.params[i].m_lexeme;
+      string paramtype= statement.paramtypes[i].m_lexeme;
+
+      if (paramtype == "paramarray") {
+        args = args & " paramarray " & paramname & "() as variant, ";
+      } else {
+        args = args & bywhat & " " & paramname & " as " & ctyp(paramtype) + ", ";
+      }
+
+    }
+
+    if (al(statement.params) > 0) args = left(args, len(args) - 2);
+    if (statement.returntype.m_lexeme == "void" ) {
+      
+      write_(statement.visibility & " function " & statement.name.m_lexeme & "(" & args & ") ");
+    } else {
+      write_ (statement.visibility & " function " & statement.name.m_lexeme & "(" & args & ") " & "as " & ctyp(statement.returntype.m_lexeme));
+    }
+
+    indent();
+
+    Stmt bodyline;
+    i = 0;
+
+    while (i < al(statement.body)) {
+      bodyLine = statement.body[i]; 
+      bodyLine.accept(me);
+      i++;
+    }
+    unindent();
+    write_("end function");
+    write_(vblf);
+    popscope();
+  }
+  private variant StmtVisitor::visitClassStmt(ClassStmt statement) {
+    bool inClass = true;
+    currentClass = statement.name.m_lexeme;
+
+    pushscope(currentClass);
+    classes[currentClass] = "";
+
+    for (long i = 0; i < al(statement.superclasses); i++) {
+      Token sc = statement.superclasses[i];
+      write_("implements " & sc.lexeme);
+    }
+
+    for (i = 0; i < al(statement.properties); i++) {
+      VarStmt vardec = statement.properties[i];
+      vardec.Stmt::accept(me);
+    }
+
+    for (i = 0; i < al(statement.methods); i++) {
+      FunctionStmt fst = statement.methods[i]; 
+      fst.Stmt::accept(me);
+    }
+    popscope();
+    currentClass = "";
+    inClass = false;
+  }
+
+  private variant StmtVisitor::visitCodeStmt(CodeStmt statement) {
+    write_(statement.code);
+  }
+  private variant StmtVisitor::visitReturnStmt(ReturnStmt statement) {
+    if (current_function_name == "") {
+      pt("Error : line", statement.keyword.m_line, " cannot return");
+    } else {
+      if (statement.hasvalue) {
+        write_("st" & current_function_name & ", " & statement.value.accept(me));
+      }
+      write_("exit function");
+    }
+  }
+  private variant StmtVisitor::visitForEachStmt(ForEachStmt statement) {
+    arad(loopscopes, loopcounter);
+    loopcounter++;
+    if (statement.hasDeclarator) {
+      statement.objdeclarator.Stmt::accept(me);
+    }
+
+    if (statement.hasIteratorDeclarator) {
+      statement.iteratordeclarator.Stmt::accept(me);
+    }
+
+    write_("for " & statement.iterator.m_lexeme & " = 0 to al(" & 
+    statement.iterable.accept(me) & ") - 1");
+    indent();
+
+    write_("st_" & statement.obj.m_lexeme & ", " & statement.iterable.accept(me) & "(" & statement.iterator.m_lexeme & ")");
+    statement.body.accept(me);
+    write_("looplabel" & loopscopes[al(loopscopes) - 1] & "bef:");
+    unindent();
+    write_("next " & statement.iterator.m_lexeme);
+    write_("looplabel" & loopscopes[al(loopscopes) - 1] & "aft:");
+
+    pop(loopscopes, al(loopscopes) - 1);
+  }
+
+  private variant StmtVisitor::visitControlStmt(ControlStmt statement) {
+    if (statement.keyword.m_type_ == BREAK_) {
+      write_ ("goto looplabel" & loopscopes[al(loopscopes) - 1] & "aft:"); 
+    } else if (statement.keyword.m_type_ == CONTINUE_) {
+      write_ ("goto looplabel" & loopscopes[al(loopscopes) - 1] & "bef:"); 
+    }
+  }
+  private variant StmtVisitor::visitEnumStmt(EnumStmt statement) {
+    pushscope(statement.name.m_lexeme);
+    write_("enum " & statement.name.m_lexeme);
+    string s = "";
+    Token item;
+    for (Token item : statement.types_) (long i) {
+      s = s & item.m_lexeme & vbcr;
+    }
+
+    if (len(s) > 2) s = left(s, len(s) - 2);
+    indent();
+    write_(s);
+    unindent();
+    write_("end enum");
+    popscope();
+  }
 }
